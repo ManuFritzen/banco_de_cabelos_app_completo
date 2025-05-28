@@ -81,6 +81,23 @@ export const lineHeightStyles = StyleSheet.create({
 // Export raw colors
 export const color = colors;
 
+// Export cores for compatibility
+export const cores = {
+  primary: colors.primary,
+  primaryLight: '#E8F5F1',
+  secondary: colors.secondary,
+  background: colors.background,
+  white: '#FFFFFF',
+  black: '#000000',
+  darkGray: '#333333',
+  gray: '#666666',
+  lightGray: '#E0E0E0',
+  error: colors.error,
+  success: colors.success,
+  warning: '#FF9800',
+  info: '#2196F3',
+};
+
 // Export combined styles
 export default {
   ...bgStyles,
@@ -93,4 +110,5 @@ export default {
   ...shadowStyles,
   ...lineHeightStyles,
   color, // Include the raw colors in the default export
+  cores, // Include cores for compatibility
 };

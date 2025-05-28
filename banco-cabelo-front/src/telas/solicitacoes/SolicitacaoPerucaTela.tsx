@@ -95,6 +95,7 @@ const SolicitacaoPerucaTela: React.FC = () => {
   };
   
   const handleSubmit = async (values: { observacao: string }) => {
+    
     // Validar a foto
     if (!fotoLaudoMedico) {
       setErroFoto('Foto do laudo médico é obrigatória');
@@ -161,6 +162,15 @@ const SolicitacaoPerucaTela: React.FC = () => {
         foto_laudo_medico: fotoFormatada,
         status_solicitacao_id: 1 // Status "Pendente"
       };      
+      
+      // Enviar solicitação para o servidor
+      try {
+        const resposta = await solicitacaoBase64Servico.criarSolicitacaoBase64(dadosSolicitacao);
+        console.log('✅ Sucesso! Resposta do servidor:', resposta.data);
+      } catch (apiError) {
+        console.error('❌ Erro na API:', apiError);
+        throw apiError; // Re-throw para ser capturado pelo catch principal
+      }
       
       // Mostra mensagem de sucesso
       Alert.alert(

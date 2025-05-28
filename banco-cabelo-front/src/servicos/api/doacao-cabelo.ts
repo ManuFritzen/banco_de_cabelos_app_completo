@@ -114,6 +114,10 @@ export const doacaoCabeloServico = {
       params: { page: pagina, limit: limite }
     });
   },
+
+  async buscarRecebimentoPorId(id: number) {
+    return cliente.get(`/recebimento/${id}`);
+  },
   
   obterUrlImagemCabelo(id: number) {
     return `${cliente.defaults.baseURL}/recebimento/imagem/${id}`;

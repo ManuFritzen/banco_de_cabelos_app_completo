@@ -1,18 +1,15 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { View, Text } from 'react-native';
 import { praiseFont } from '../../styles/CustomFonts';
 import tw from '../../styles/tailwind';
 import themeStyles from '../../styles/theme';
+import IconeNotificacoes from '../comuns/IconeNotificacoes';
 
 interface HomeHeaderProps {
   ehAdmin: boolean;
 }
 
 const HomeHeader: React.FC<HomeHeaderProps> = ({ ehAdmin }) => {
-  const navigation = useNavigation<any>();
-  
   return (
     <View style={[themeStyles.bgPrimary, tw.pX4, tw.pY3, tw.flexRow, tw.itemsCenter, tw.justifyBetween]}>
       <View style={[tw.flexRow, tw.itemsCenter]}>
@@ -39,13 +36,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ ehAdmin }) => {
       </View>
       
       <View style={[tw.flexRow]}>
-        <TouchableOpacity 
-          style={[{width: 40, height: 40}, tw.itemsCenter, tw.justifyCenter]}
-          onPress={() => navigation.navigate('EmConstrucao', { titulo: 'Notificações' })}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
+        <IconeNotificacoes color="#FFFFFF" size={24} />
       </View>
     </View>
   );

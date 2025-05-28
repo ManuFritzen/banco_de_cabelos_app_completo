@@ -15,6 +15,7 @@ const comentarioRoutes = require('./routes/comentarioRoutes');
 const anexoPublicacaoRoutes = require('./routes/anexoPublicacaoRoutes');
 const doacaoRoutes = require('./routes/doacaoRoutes');
 const curtidaRoutes = require('./routes/curtidaRoutes');
+const notificacaoRoutes = require('./routes/notificacaoRoutes');
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.use('/api/comentarios', comentarioRoutes);
 app.use('/api/anexos', anexoPublicacaoRoutes);
 app.use('/api/doacoes', doacaoRoutes);
 app.use('/api/curtidas', curtidaRoutes);
+app.use('/api/notificacoes', notificacaoRoutes);
 
 app.get('/api/status', (req, res) => {
   res.json({ 

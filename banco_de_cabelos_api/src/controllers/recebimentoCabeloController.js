@@ -6,6 +6,7 @@ const BaseController = require('./BaseController');
 const { Validators } = require('../utils/validators');
 const fs = require('fs').promises;
 const path = require('path');
+const NotificacaoController = require('./notificacaoController');
 
 class RecebimentoCabeloController extends BaseController {
   static TIPO_PESSOA_FISICA = 'F';
@@ -137,6 +138,16 @@ class RecebimentoCabeloController extends BaseController {
         const recebimentoCompleto = await Recebimento.findByPk(result.recebimento.id, {
           include: this.getDefaultIncludes()
         });
+
+        // Criar notificação para a instituição
+        const pessoaFisica = await Usuario.findByPk(req.usuario.id, {
+          attributes: ['id', 'nome']
+        });
+        
+        await NotificacaoController.criarNotificacaoRecebimentoCabelo(
+          recebimentoCompleto,
+          { nome: pessoaFisica.nome, id: req.usuario.id }
+        );
 
         this.sendSuccess(res, recebimentoCompleto, 'Doação de cabelo registrada com sucesso', 201);
       } catch (error) {
@@ -311,6 +322,16 @@ class RecebimentoCabeloController extends BaseController {
       
       await t.commit();
       
+      // Criar notificação para a instituição
+      const pessoaFisica = await Usuario.findByPk(req.usuario.id, {
+        attributes: ['id', 'nome']
+      });
+      
+      await NotificacaoController.criarNotificacaoRecebimentoCabelo(
+        { id: recebimento.id, instituicao_id: instituicao_id },
+        { nome: pessoaFisica.nome, id: req.usuario.id }
+      );
+      
       this.sendSuccess(res, { 
         id: recebimento.id,
         cabelo_id: cabelo.id 
@@ -319,6 +340,46 @@ class RecebimentoCabeloController extends BaseController {
       await t.rollback();
       throw erro;
     }
+  });
+
+  buscarRecebimentoPorId = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const usuarioId = req.usuario.id;
+    
+    const recebimentoId = this.validateNumericId(id, 'ID do recebimento');
+    
+    const recebimento = await Recebimento.findOne({
+      where: { id: recebimentoId },
+      include: [
+        {
+          model: Cabelo,
+          include: [{ model: Cor }]
+        },
+        {
+          model: Usuario,
+          as: 'PessoaFisica',
+          attributes: ['id', 'nome', 'email', 'telefone']
+        },
+        {
+          model: Usuario,
+          as: 'Instituicao',
+          attributes: ['id', 'nome']
+        }
+      ]
+    });
+    
+    if (!recebimento) {
+      throw new ApiError('Recebimento não encontrado', 404);
+    }
+    
+    // Verificar se o usuário tem permissão para ver este recebimento
+    if (req.usuario.tipo !== 'A' && 
+        recebimento.instituicao_id !== usuarioId && 
+        recebimento.pessoa_fisica_id !== usuarioId) {
+      throw new ApiError('Acesso negado', 403);
+    }
+    
+    this.sendSuccess(res, { data: recebimento });
   });
 }
 

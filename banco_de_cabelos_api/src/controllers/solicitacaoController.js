@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { upload, fileToByteaBuffer } = require('../middlewares/uploadMiddleware');
 const BaseController = require('./BaseController');
 const { Validators } = require('../utils/validators');
+const NotificacaoController = require('./notificacaoController');
 
 class SolicitacaoController extends BaseController {
   static TIPO_PESSOA_FISICA = 'F';
@@ -226,12 +227,41 @@ class SolicitacaoController extends BaseController {
     await this.validarStatusSolicitacao(validacao.sanitized.status_solicitacao_id || status_solicitacao_id);
     
     try {
+      const statusAnterior = solicitacao.status_solicitacao_id;
+      const novoStatus = validacao.sanitized.status_solicitacao_id || status_solicitacao_id;
+      
       await solicitacao.update({
-        status_solicitacao_id: validacao.sanitized.status_solicitacao_id || status_solicitacao_id,
+        status_solicitacao_id: novoStatus,
         observacao: validacao.sanitized.observacao !== undefined ? validacao.sanitized.observacao : solicitacao.observacao
       });
       
       const solicitacaoAtualizada = await this.buscarSolicitacaoCompleta(idValidado);
+      
+      // Criar notificação se o status mudou
+      if (statusAnterior !== novoStatus) {
+        console.log('Status mudou de', statusAnterior, 'para', novoStatus);
+        console.log('Solicitação atualizada:', solicitacaoAtualizada);
+        
+        // Buscar o nome do status diretamente se não estiver na solicitação
+        let statusNome = solicitacaoAtualizada.StatusSolicitacao?.nome;
+        
+        if (!statusNome) {
+          const statusObj = await StatusSolicitacao.findByPk(novoStatus);
+          statusNome = statusObj?.nome;
+          console.log('Status buscado diretamente:', statusNome);
+        }
+        
+        if (statusNome) {
+          console.log('Criando notificação para status:', statusNome);
+          await NotificacaoController.criarNotificacaoSolicitacao(
+            solicitacaoAtualizada,
+            statusNome
+          );
+          console.log('Notificação criada com sucesso');
+        } else {
+          console.error('StatusSolicitacao não encontrado');
+        }
+      }
       
       const solicitacaoJSON = JSON.parse(JSON.stringify(solicitacaoAtualizada));
       
@@ -414,6 +444,10 @@ class SolicitacaoController extends BaseController {
   }
 
   criarSolicitacaoBase64 = asyncHandler(async (req, res) => {
+    console.log('=== CRIAR SOLICITAÇÃO BASE64 ===');
+    console.log('Body recebido:', req.body);
+    console.log('Usuário:', req.usuario);
+    
     const { observacao, foto_laudo_medico, filename, status_solicitacao_id } = req.body;
     const pessoa_fisica_id = req.usuario.id;
     
@@ -432,8 +466,10 @@ class SolicitacaoController extends BaseController {
       }
       
       const imageBuffer = Buffer.from(matches[2], 'base64');
+      console.log('Tamanho da imagem:', imageBuffer.length);
       
       const validacao = Validators.validateSolicitacaoData({ observacao });
+      console.log('Validação:', validacao);
       
       const dadosSolicitacao = {
         pessoa_fisica_id,
@@ -442,13 +478,22 @@ class SolicitacaoController extends BaseController {
         foto_laudo_medico: imageBuffer
       };
       
+      console.log('Dados da solicitação (sem imagem):', {
+        ...dadosSolicitacao,
+        foto_laudo_medico: `Buffer de ${imageBuffer.length} bytes`
+      });
+      
       const solicitacao = await Solicitacao.create(dadosSolicitacao);
+      console.log('Solicitação criada:', solicitacao.id);
+      
       const solicitacaoCompleta = await this.buscarSolicitacaoCompleta(solicitacao.id);
+      console.log('Solicitação completa buscada:', solicitacaoCompleta ? 'Sucesso' : 'Falhou');
       
       const solicitacaoJSON = JSON.parse(JSON.stringify(solicitacaoCompleta));
       
       this.sendSuccess(res, solicitacaoJSON, 'Solicitação criada com sucesso', 201);
     } catch (error) {
+      console.error('Erro ao criar solicitação:', error);
       throw error;
     }
   });

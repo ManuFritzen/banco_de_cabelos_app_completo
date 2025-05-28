@@ -1,7 +1,8 @@
 const BaseController = require('./BaseController');
 const { sequelize } = require('../../config/database');
 const { asyncHandler, ApiError } = require('../utils/errorHandler');
-const { Publicacao, Comentario } = require('../models');
+const { Publicacao, Comentario, Usuario } = require('../models');
+const NotificacaoController = require('./notificacaoController');
 
 class CurtidaController extends BaseController {
   async executarCurtida(tabela, campos, valores) {
@@ -64,6 +65,19 @@ class CurtidaController extends BaseController {
         { publicacao_id: publicacaoIdValidado, usuario_id: usuarioId }
       );
       
+      // Criar notificação para o autor da publicação (se não for o próprio)
+      if (publicacao.usuario_id !== usuarioId) {
+        const usuario = await Usuario.findByPk(usuarioId, {
+          attributes: ['id', 'nome']
+        });
+        
+        await NotificacaoController.criarNotificacaoCurtidaPublicacao(
+          { id: result.id },
+          publicacao,
+          usuario
+        );
+      }
+      
       return this.sendSuccess(res, { data: result }, 'Publicação curtida com sucesso', 201);
     } catch (error) {
       if (error.original?.code === '23505') {
@@ -122,6 +136,19 @@ class CurtidaController extends BaseController {
         ['comentario_id', 'usuario_id'],
         { comentario_id: comentarioIdValidado, usuario_id: usuarioId }
       );
+      
+      // Criar notificação para o autor do comentário (se não for o próprio)
+      if (comentario.usuario_id !== usuarioId) {
+        const usuario = await Usuario.findByPk(usuarioId, {
+          attributes: ['id', 'nome']
+        });
+        
+        await NotificacaoController.criarNotificacaoCurtidaComentario(
+          { id: result.id },
+          comentario,
+          usuario
+        );
+      }
       
       return this.sendSuccess(res, { data: result }, 'Comentário curtido com sucesso', 201);
     } catch (error) {

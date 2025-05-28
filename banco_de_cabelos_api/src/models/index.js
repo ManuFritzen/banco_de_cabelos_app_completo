@@ -14,6 +14,7 @@ const Publicacao = require('./publicacaoModel');
 const Comentario = require('./comentarioModel');
 const AnexoPublicacao = require('./anexoPublicacaoModel');
 const BlacklistedToken = require('./blackListModel');
+const Notificacao = require('./notificacaoModel');
 
 module.exports = {
   Usuario,
@@ -31,5 +32,6 @@ module.exports = {
   Publicacao,
   Comentario,
   AnexoPublicacao,
-  BlacklistedToken
+  BlacklistedToken,
+  Notificacao
 };

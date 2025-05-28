@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Modal, Image, Alert, Linking, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { useNavigation } from '@react-navigation/native';
 import { useAutenticacao } from '../../contextos/AutenticacaoContexto';
 import { doacaoCabeloServico } from '../../servicos/api/doacao-cabelo';
@@ -58,7 +58,9 @@ interface Recebimento {
 
 const RecebimentosCabeloTela: React.FC = () => {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const { usuario, ehInstituicao } = useAutenticacao();
+  
   const [recebimentos, setRecebimentos] = useState<Recebimento[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -120,9 +122,48 @@ const RecebimentosCabeloTela: React.FC = () => {
 
   useFocusEffect(
     useCallback(() => {
+    
       buscarRecebimentos(1, true);
-    }, [buscarRecebimentos])
+    }, [buscarRecebimentos, navigation])
   );
+
+  // Efeito para abrir modal automaticamente quando vem da notificação
+  useEffect(() => {
+    const abrirModalDaNotificacao = async () => {
+      const params = route?.params;
+    
+      if (params?.openModal && params?.recebimentoId && !carregando) {
+        
+        try {
+          const recebimento = await buscarRecebimentoPorId(params.recebimentoId);
+          
+          if (recebimento) {
+            setTimeout(() => {
+              verDetalhes(recebimento);
+            }, 500);
+          } else {
+            Alert.alert(
+              'Recebimento não encontrado',
+              'Não foi possível encontrar os detalhes desta doação.',
+              [{ text: 'OK' }]
+            );
+          }
+        } catch (error) {
+          console.error('Erro ao buscar recebimento:', error);
+          Alert.alert(
+            'Erro',
+            'Não foi possível carregar os detalhes da doação.',
+            [{ text: 'OK' }]
+          );
+        }
+        
+        // Limpar parâmetros para evitar reabrir o modal
+        navigation.setParams({ openModal: false, recebimentoId: null });
+      }
+    };
+
+    abrirModalDaNotificacao();
+  }, [route?.params, carregando, navigation]);
 
   const carregarMais = () => {
     if (carregandoMais || paginaAtual >= totalPaginas) return;
@@ -152,7 +193,21 @@ const RecebimentosCabeloTela: React.FC = () => {
     }
   };
 
+  const buscarRecebimentoPorId = async (id: number) => {
+    try {
+      const response = await doacaoCabeloServico.buscarRecebimentoPorId(id);
+      if (response.data.success) {
+        return response.data.data;
+      }
+      return null;
+    } catch (erro) {
+      console.error('Erro ao buscar recebimento por ID:', erro);
+      return null;
+    }
+  };
+
   const verDetalhes = (recebimento: Recebimento) => {
+    
     if (recebimento.cabelo?.id) {
       setCarregandoImagem(true);
     }

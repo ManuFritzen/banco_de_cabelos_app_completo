@@ -6,11 +6,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { publicacoesServico } from '../../servicos/api/publicacoes';
 import { useAutenticacao } from '../../contextos/AutenticacaoContexto';
 import CardPublicacao from '../../components/forum/CardPublicacao';
-import { praiseFont } from '../../styles/CustomFonts';
+import HomeHeader from '../../components/forum/HomeHeader';
 import {
   SafeContainer,
-  Container,
-  Row
+  Container
 } from '../../styles/componentes';
 import tw from '../../styles/tailwind';
 import themeStyles from '../../styles/theme';
@@ -97,7 +96,6 @@ const HomeTela: React.FC = () => {
   // Atualizar dados quando a tela receber foco
   useFocusEffect(
     useCallback(() => {
-      console.log('Tela Home recebeu foco, verificando atualizações');
       
       const verificarAtualizacoes = async () => {
         try {
@@ -107,7 +105,6 @@ const HomeTela: React.FC = () => {
           
           // Se houver qualquer mudança, recarregar
           if (publicationCreated || publicationUpdated || commentChanges) {
-            console.log('Detectadas mudanças, recarregando publicações');
             setCarregando(true);
             setPagina(1);
             await buscarPublicacoes(1, true);
@@ -211,39 +208,7 @@ const HomeTela: React.FC = () => {
   
   return (
     <SafeContainer style={themeStyles.bgBackground}>
-      <View style={[themeStyles.bgPrimary, tw.pX4, tw.pY3, tw.flexRow, tw.itemsCenter, tw.justifyBetween]}>
-        <Row>
-          <Text
-            style={[
-              {
-                color: 'white',
-                fontSize: 24,
-                marginRight: 4
-              },
-              praiseFont
-            ]}
-          >
-            Banco de Cabelos
-          </Text>
-
-          {ehAdmin() && (
-            <View style={[tw.bgYellow500, tw.roundedFull, tw.pX2, { paddingVertical: 2 }, tw.mL2]}>
-              <Text style={[tw.textWhite, tw.textXs, tw.fontBold]}>
-                ADMIN
-              </Text>
-            </View>
-          )}
-        </Row>
-
-        <Row>
-          <TouchableOpacity
-            style={[tw.w10, tw.h10, tw.itemsCenter, tw.justifyCenter]}
-            onPress={() => navigation.navigate('EmConstrucao', { titulo: 'Notificações' })}
-          >
-            <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-        </Row>
-      </View>
+      <HomeHeader ehAdmin={ehAdmin()} />
 
       <Container>
         {carregando ? (

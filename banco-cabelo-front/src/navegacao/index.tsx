@@ -41,6 +41,9 @@ import NovaPublicacaoTela from '../telas/forum/NovaPublicacaoTela';
 import EditarPublicacaoTela from '../telas/forum/EditarPublicacaoTela';
 import DetalhesPublicacaoTela from '../telas/forum/DetalhesPublicacaoTela';
 
+// Tela de Notificações
+import NotificacoesTela from '../telas/NotificacoesTela';
+
 // Tipos para as navegações
 type NavegacaoAutenticacaoParamList = {
   BoasVindas: undefined;
@@ -63,7 +66,7 @@ type NavegacaoPrincipalParamList = {
   DetalhesPublicacao: { publicacaoId: number };
   DoacaoCabelo: { instituicaoId: number };
   MinhasDoacoesCabelo: undefined;
-  RecebimentosCabelo: undefined;
+  RecebimentosCabelo: { openModal?: boolean; recebimentoId?: number };
   ListaPerucas: { instituicaoId?: number };
   DetalhesPeruca: { id: number };
   CadastrarPeruca: undefined;
@@ -72,6 +75,7 @@ type NavegacaoPrincipalParamList = {
   MinhasSolicitacoes: undefined;
   SolicitacoesPerucaInstituicao: undefined;
   DetalhesSolicitacao: { id: number };
+  Notificacoes: undefined;
   EmConstrucao: { titulo?: string };
 };
 
@@ -207,6 +211,11 @@ const NavegacaoPrincipal = () => {
         name="SolicitacoesPerucaInstituicao" 
         component={SolicitacoesPerucaInstituicaoTela} 
         options={{ title: 'Solicitações de Perucas' }} 
+      />
+      <PrincipalStack.Screen 
+        name="Notificacoes" 
+        component={NotificacoesTela} 
+        options={{ title: 'Notificações' }} 
       />
       <PrincipalStack.Screen 
         name="EmConstrucao" 

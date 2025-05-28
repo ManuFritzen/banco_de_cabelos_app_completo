@@ -11,3 +11,15 @@ export const carregarFontes = async () => {
     return false;
   }
 };
+
+export const fontes = {
+  principal: {
+    regular: 'System',
+    bold: 'System',
+    light: 'System',
+    medium: 'System',
+  },
+  decorativa: {
+    regular: 'Praise',
+  },
+};

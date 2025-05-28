@@ -5,7 +5,8 @@ const {
     listarTodasDoacoesCabelo,
     listarMinhasDoacoesCabelo,
     listarMeusRecebimentosDeCabelos,
-    obterImagemCabelo
+    obterImagemCabelo,
+    buscarRecebimentoPorId
 } = require('../controllers/recebimentoCabeloController');
 const { auth, verificarTipo } = require('../middlewares/authMiddleware');
 const { check } = require('express-validator');
@@ -42,5 +43,6 @@ router.get('/', verificarTipo(['A']), listarTodasDoacoesCabelo);
 router.get('/pessoa', verificarTipo(['F']), listarMinhasDoacoesCabelo);
 router.get('/instituicao', verificarTipo(['J']), listarMeusRecebimentosDeCabelos);
 router.get('/imagem/:id', obterImagemCabelo);
+router.get('/:id', buscarRecebimentoPorId);
 
 module.exports = router;

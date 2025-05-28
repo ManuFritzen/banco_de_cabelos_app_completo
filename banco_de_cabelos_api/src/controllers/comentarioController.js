@@ -4,6 +4,7 @@ const { ApiError, asyncHandler } = require('../utils/errorHandler');
 const { sequelize } = require('../../config/database');
 const { QueryTypes } = require('sequelize');
 const { Validators } = require('../utils/validators');
+const NotificacaoController = require('./notificacaoController');
 
 class ComentarioController extends BaseController {
   async verificarCurtida(comentarioId, usuarioId) {
@@ -126,6 +127,14 @@ class ComentarioController extends BaseController {
         attributes: ['id', 'nome', 'tipo']
       }]
     });
+    
+    // Criar notificação para o autor da publicação (se não for o próprio)
+    if (publicacao.usuario_id !== usuario_id) {
+      await NotificacaoController.criarNotificacaoComentario(
+        comentarioCompleto,
+        publicacao
+      );
+    }
     
     return this.sendSuccess(res, { data: comentarioCompleto }, 'Comentário criado com sucesso', 201);
   });

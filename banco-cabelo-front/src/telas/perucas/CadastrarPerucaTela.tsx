@@ -325,17 +325,7 @@ const CadastrarPerucaTela: React.FC = () => {
   };
   
   return (
-    <SafeContainer style={themeStyles.bgBackground}>
-      <StatusBar backgroundColor={themeStyles.color.primary} barStyle="light-content" />
-      <Row style={[themeStyles.bgPrimary, tw.pX4, tw.pY3]}>
-        <TouchableOpacity onPress={voltar}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={[tw.textWhite, tw.textLg, tw.fontBold, tw.mL3]}>
-          Cadastrar Peruca
-        </Text>
-      </Row>
-      
+    <SafeContainer style={themeStyles.bgBackground}>      
       <TouchableOpacity
         style={[themeStyles.bgPrimary, tw.pX4, tw.pY4]}
         onPress={abrirModal}

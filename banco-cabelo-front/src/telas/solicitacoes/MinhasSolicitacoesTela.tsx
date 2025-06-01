@@ -179,14 +179,6 @@ const MinhasSolicitacoesTela: React.FC = () => {
   
   return (
     <SafeContainer style={themeStyles.bgBackground}>
-      <Row style={[themeStyles.bgPrimary, tw.pX4, tw.pY3]}>
-        <TouchableOpacity onPress={voltar}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={[tw.textWhite, tw.textLg, tw.fontBold, tw.mL3]}>
-          Minhas Solicitações
-        </Text>
-      </Row>
       
       <Container>
         {carregando ? (

@@ -362,7 +362,10 @@ class PerucaController extends BaseController {
       order: [['nome', 'ASC']]
     });
     
-    this.sendSuccess(res, cores);
+    res.status(200).json({
+      success: true,
+      data: cores
+    });
   });
 
   listarTiposPeruca = asyncHandler(async (_req, res) => {
@@ -371,7 +374,10 @@ class PerucaController extends BaseController {
       order: [['nome', 'ASC']]
     });
     
-    this.sendSuccess(res, tipos);
+    res.status(200).json({
+      success: true,
+      data: tipos
+    });
   });
 
   criarPerucaBase64 = asyncHandler(async (req, res) => {

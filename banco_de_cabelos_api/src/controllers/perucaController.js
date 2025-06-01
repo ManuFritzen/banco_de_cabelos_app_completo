@@ -111,7 +111,10 @@ class PerucaController extends BaseController {
       throw new ApiError('Peruca não encontrada', 404);
     }
     
-    this.sendSuccess(res, peruca);
+    // Converte para objeto plano para evitar referências circulares
+    const perucaJson = peruca.toJSON();
+    
+    this.sendSuccess(res, perucaJson);
   });
 
   listarPerucasPorInstituicao = asyncHandler(async (req, res) => {
@@ -170,7 +173,10 @@ class PerucaController extends BaseController {
           include: this.getDefaultIncludes()
         });
         
-        this.sendSuccess(res, perucaCompleta, 'Peruca cadastrada com sucesso', 201);
+        // Converte para objeto plano para evitar referências circulares
+        const perucaJson = perucaCompleta.toJSON();
+        
+        this.sendSuccess(res, perucaJson, 'Peruca cadastrada com sucesso', 201);
       } catch (error) {
         if (req.file) await this.removeUploadedFile(req.file.path);
         throw handleSequelizeError(error);
@@ -214,16 +220,51 @@ class PerucaController extends BaseController {
     
     const peruca = await this.verificarPermissaoPeruca(req.usuario.id, idValidado, req.usuario.tipo);
     
-    upload.single('foto_peruca')(req, res, async (err) => {
-      if (err) {
-        return res.status(400).json({
-          success: false,
-          message: err.message
+    // Verifica se é uma requisição multipart/form-data
+    const contentType = req.headers['content-type'] || '';
+    const isMultipart = contentType.includes('multipart/form-data');
+    
+    if (isMultipart) {
+      // Se for multipart, processa com upload usando Promise
+      return new Promise((resolve, reject) => {
+        upload.single('foto_peruca')(req, res, async (err) => {
+          if (err) {
+            return res.status(400).json({
+              success: false,
+              message: err.message
+            });
+          }
+          
+          try {
+            await this.validarEntidadesRelacionadas(req.body, req.file);
+            
+            const dadosAtualizacao = await this.construirDadosAtualizacao(req);
+            await peruca.update(dadosAtualizacao);
+            
+            const perucaAtualizada = await Peruca.findByPk(idValidado, {
+              include: this.getDefaultIncludes()
+            });
+            
+            // Converte para objeto plano para evitar referências circulares
+            const perucaJson = perucaAtualizada.toJSON();
+            
+            this.sendSuccess(res, perucaJson, 'Peruca atualizada com sucesso');
+            resolve();
+          } catch (error) {
+            if (req.file) await this.removeUploadedFile(req.file.path);
+            const erro = handleSequelizeError(error);
+            res.status(erro.statusCode || 500).json({
+              success: false,
+              message: erro.message
+            });
+            reject(erro);
+          }
         });
-      }
-      
+      });
+    } else {
+      // Se for JSON, processa diretamente
       try {
-        await this.validarEntidadesRelacionadas(req.body, req.file);
+        await this.validarEntidadesRelacionadas(req.body);
         
         const dadosAtualizacao = await this.construirDadosAtualizacao(req);
         await peruca.update(dadosAtualizacao);
@@ -232,16 +273,18 @@ class PerucaController extends BaseController {
           include: this.getDefaultIncludes()
         });
         
-        this.sendSuccess(res, perucaAtualizada, 'Peruca atualizada com sucesso');
+        // Converte para objeto plano para evitar referências circulares
+        const perucaJson = perucaAtualizada.toJSON();
+        
+        this.sendSuccess(res, perucaJson, 'Peruca atualizada com sucesso');
       } catch (error) {
-        if (req.file) await this.removeUploadedFile(req.file.path);
         throw handleSequelizeError(error);
       }
-    });
+    }
   });
 
   async construirDadosAtualizacao(req) {
-    const { tipo_peruca_id, cor_id, comprimento, tamanho } = req.body;
+    const { tipo_peruca_id, cor_id, comprimento, tamanho, disponivel } = req.body;
     
     const validacao = Validators.validatePerucaData({ tipo_peruca_id, cor_id, comprimento, tamanho });
     if (!validacao.isValid) {
@@ -264,6 +307,9 @@ class PerucaController extends BaseController {
     }
     if (tamanho !== undefined && validacao.sanitized.tamanho) {
       dadosAtualizacao.tamanho = validacao.sanitized.tamanho;
+    }
+    if (disponivel !== undefined) {
+      dadosAtualizacao.disponivel = disponivel === true || disponivel === 'true';
     }
     
     const foto = await this.processarFotoPeruca(req.file);
@@ -316,7 +362,7 @@ class PerucaController extends BaseController {
       order: [['nome', 'ASC']]
     });
     
-    this.sendSuccess(res, { data: cores });
+    this.sendSuccess(res, cores);
   });
 
   listarTiposPeruca = asyncHandler(async (_req, res) => {
@@ -325,7 +371,7 @@ class PerucaController extends BaseController {
       order: [['nome', 'ASC']]
     });
     
-    this.sendSuccess(res, { data: tipos });
+    this.sendSuccess(res, tipos);
   });
 
   criarPerucaBase64 = asyncHandler(async (req, res) => {

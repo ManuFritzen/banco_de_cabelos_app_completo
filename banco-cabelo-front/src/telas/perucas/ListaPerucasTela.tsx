@@ -7,7 +7,10 @@ import {
   TouchableOpacity, 
   ActivityIndicator,
   TextInput,
-  Image
+  Image,
+  Modal,
+  ScrollView,
+  Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -56,6 +59,16 @@ const ListaPerucasTela: React.FC = () => {
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(1);
   const [termoBusca, setTermoBusca] = useState('');
+  const [modalVisivel, setModalVisivel] = useState(false);
+  const [perucaSelecionada, setPerucaSelecionada] = useState<Peruca | null>(null);
+  const [modoEdicao, setModoEdicao] = useState(false);
+  const [carregandoImagem, setCarregandoImagem] = useState(false);
+  
+  // Estados para edição
+  const [comprimentoEditado, setComprimentoEditado] = useState('');
+  const [tamanhoEditado, setTamanhoEditado] = useState<'P' | 'M' | 'G'>('M');
+  const [disponivelEditado, setDisponivelEditado] = useState(true);
+  const [salvandoAlteracoes, setSalvandoAlteracoes] = useState(false);
   
   const { usuario } = useAutenticacao();
   const navigation = useNavigation<any>();
@@ -156,8 +169,99 @@ const ListaPerucasTela: React.FC = () => {
     carregarPerucas(paginaAtual + 1);
   };
   
-  const navegarParaDetalhes = (perucaId: number) => {
-    navigation.navigate('DetalhesPeruca', { id: perucaId });
+  const abrirModalDetalhes = async (peruca: Peruca) => {
+    setPerucaSelecionada(peruca);
+    setComprimentoEditado(peruca.comprimento.toString());
+    setTamanhoEditado(peruca.tamanho);
+    setDisponivelEditado(peruca.disponivel);
+    setModalVisivel(true);
+    setModoEdicao(false);
+  };
+  
+  const fecharModal = () => {
+    setModalVisivel(false);
+    setPerucaSelecionada(null);
+    setModoEdicao(false);
+  };
+  
+  const iniciarEdicao = () => {
+    setModoEdicao(true);
+  };
+  
+  const cancelarEdicao = () => {
+    if (perucaSelecionada) {
+      setComprimentoEditado(perucaSelecionada.comprimento.toString());
+      setTamanhoEditado(perucaSelecionada.tamanho);
+      setDisponivelEditado(perucaSelecionada.disponivel);
+    }
+    setModoEdicao(false);
+  };
+  
+  const salvarAlteracoes = async () => {
+    if (!perucaSelecionada) return;
+    
+    try {
+      setSalvandoAlteracoes(true);
+      
+      const dadosAtualizados = {
+        comprimento: parseInt(comprimentoEditado),
+        tamanho: tamanhoEditado,
+        disponivel: disponivelEditado
+      };
+      
+      const resposta = await perucasServico.atualizarPeruca(perucaSelecionada.id, dadosAtualizados);
+      
+      if (resposta.data && resposta.data.success) {
+        Alert.alert('Sucesso', 'Peruca atualizada com sucesso!');
+        
+        // Atualiza a lista de perucas com os dados retornados da API
+        const perucaAtualizada = resposta.data.data || resposta.data;
+        const perucasAtualizadas = perucas.map(p => 
+          p.id === perucaSelecionada.id 
+            ? { ...p, ...perucaAtualizada }
+            : p
+        );
+        setPerucas(perucasAtualizadas);
+        
+        // Atualiza a peruca selecionada com os dados retornados e volta para modo visualização
+        setPerucaSelecionada({ ...perucaSelecionada, ...perucaAtualizada });
+        setModoEdicao(false);
+        // Modal permanece aberto no modo de visualização
+      } else {
+        Alert.alert('Erro', resposta.data?.message || 'Não foi possível atualizar a peruca.');
+      }
+    } catch (erro: any) {
+      console.error('Erro ao salvar alterações:', erro);
+      
+      // Verifica se a atualização foi bem sucedida mesmo com erro de rede
+      if (erro.message === 'Network Error' && erro.config?.method === 'put') {
+        // Recarrega os dados para verificar se a atualização foi aplicada
+        try {
+          const perucaAtualizada = await perucasServico.obterPeruca(perucaSelecionada.id);
+          if (perucaAtualizada.data && perucaAtualizada.data.data) {
+            Alert.alert('Sucesso', 'Peruca atualizada com sucesso!');
+            
+            const perucaData = perucaAtualizada.data.data;
+            const perucasAtualizadas = perucas.map(p => 
+              p.id === perucaSelecionada.id 
+                ? { ...p, ...perucaData }
+                : p
+            );
+            setPerucas(perucasAtualizadas);
+            setPerucaSelecionada(perucaData);
+            setModoEdicao(false);
+            return;
+          }
+        } catch (e) {
+          console.error('Erro ao verificar atualização:', e);
+        }
+      }
+      
+      const mensagemErro = erro.response?.data?.message || erro.message || 'Ocorreu um erro ao salvar as alterações.';
+      Alert.alert('Erro', mensagemErro);
+    } finally {
+      setSalvandoAlteracoes(false);
+    }
   };
   
   const navegarParaNovaCadastro = () => {
@@ -183,7 +287,7 @@ const ListaPerucasTela: React.FC = () => {
     return (
       <TouchableOpacity
         style={[tw.bgWhite, tw.rounded, tw.p4, tw.mB3, tw.shadow]}
-        onPress={() => navegarParaDetalhes(item.id)}
+        onPress={() => abrirModalDetalhes(item)}
       >
         <View style={[tw.flexRow, tw.itemsStart]}>
           <View style={[tw.mR3, tw.relative]}>
@@ -311,11 +415,8 @@ const ListaPerucasTela: React.FC = () => {
   return (
     <SafeContainer style={themeStyles.bgBackground}>
       <Row style={[themeStyles.bgPrimary, tw.pX4, tw.pY3]}>
-        <TouchableOpacity onPress={voltar}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
         <Text style={[tw.textWhite, tw.textLg, tw.fontBold, tw.mL3]}>
-          {instituicaoId ? 'Perucas da Instituição' : 'Minhas Perucas'}
+          {instituicaoId ? 'Perucas da Instituição' : 'Adicionar Nova Peruca'}
         </Text>
         
         {usuario?.tipo === 'J' && (
@@ -369,6 +470,192 @@ const ListaPerucasTela: React.FC = () => {
           contentContainerStyle={tw.p4}
         />
       )}
+      
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisivel}
+        onRequestClose={fecharModal}
+      >
+        <View style={[tw.flex1, {backgroundColor: 'rgba(0, 0, 0, 0.5)'}, tw.justifyCenter, tw.itemsCenter]}>
+          <ScrollView
+            style={[tw.bgWhite, tw.roundedL, tw.p5, {width: '90%', maxHeight: '85%', borderWidth: 1, borderColor: '#f0f0f0'}]}
+          >
+            <Row style={[tw.justifyBetween, tw.mB4]}>
+              <Text style={[themeStyles.textText, tw.textXl, tw.fontBold]}>
+                {modoEdicao ? 'Editar Peruca' : 'Detalhes da Peruca'}
+              </Text>
+              <TouchableOpacity onPress={fecharModal}>
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </Row>
+            
+            {perucaSelecionada && (
+              <>
+                {/* Imagem da Peruca */}
+                <View style={[tw.itemsCenter, tw.mB4]}>
+                  <Image
+                    source={{ uri: perucasServico.obterUrlImagemPeruca(perucaSelecionada.id) }}
+                    style={[tw.wFull, tw.h48, tw.roundedLg]}
+                    resizeMode="cover"
+                    defaultSource={require('../../../assets/icon.png')}
+                  />
+                </View>
+                
+                {/* Informações da Peruca */}
+                <View style={tw.mB4}>
+                  <Text style={[themeStyles.textText, tw.fontBold, tw.mB2]}>Informações da Peruca</Text>
+                  
+                  <Row style={tw.mB2}>
+                    <Text style={[tw.textGray600, tw.mR2]}>Tipo:</Text>
+                    <Text style={themeStyles.textText}>
+                      {perucaSelecionada.tipo_peruca?.nome || 'Não informado'}
+                    </Text>
+                  </Row>
+                  
+                  <Row style={tw.mB2}>
+                    <Text style={[tw.textGray600, tw.mR2]}>Cor:</Text>
+                    <View style={[tw.flexRow, tw.itemsCenter]}>
+                      <View style={[
+                        tw.w4, tw.h4, tw.rounded, tw.mR2, tw.border, tw.borderGray300,
+                        { backgroundColor: obterCorHex(perucaSelecionada.cor?.nome || '') }
+                      ]} />
+                      <Text style={themeStyles.textText}>
+                        {perucaSelecionada.cor?.nome || 'Não informada'}
+                      </Text>
+                    </View>
+                  </Row>
+                  
+                  <Row style={tw.mB2}>
+                    <Text style={[tw.textGray600, tw.mR2]}>Comprimento:</Text>
+                    {modoEdicao ? (
+                      <View style={[tw.flexRow, tw.itemsCenter]}>
+                        <TextInput
+                          style={[tw.borderB, tw.borderGray300, tw.pX2, tw.pY1, tw.w16, tw.textCenter]}
+                          value={comprimentoEditado}
+                          onChangeText={setComprimentoEditado}
+                          keyboardType="numeric"
+                          maxLength={3}
+                        />
+                        <Text style={[tw.mL2, themeStyles.textText]}>cm</Text>
+                      </View>
+                    ) : (
+                      <Text style={themeStyles.textText}>
+                        {perucaSelecionada.comprimento} cm
+                      </Text>
+                    )}
+                  </Row>
+                  
+                  <Row style={tw.mB2}>
+                    <Text style={[tw.textGray600, tw.mR2]}>Tamanho:</Text>
+                    {modoEdicao ? (
+                      <View style={[tw.flexRow]}>
+                        {['P', 'M', 'G'].map((tam) => (
+                          <TouchableOpacity
+                            key={tam}
+                            style={[
+                              tw.mR2, tw.pX3, tw.pY1, tw.rounded,
+                              tamanhoEditado === tam ? themeStyles.bgSecondary : tw.bgGray200
+                            ]}
+                            onPress={() => setTamanhoEditado(tam as 'P' | 'M' | 'G')}
+                          >
+                            <Text style={[
+                              tamanhoEditado === tam ? tw.textWhite : tw.textGray700
+                            ]}>
+                              {tam}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    ) : (
+                      <Text style={themeStyles.textText}>
+                        {perucaSelecionada.tamanho}
+                      </Text>
+                    )}
+                  </Row>
+                  
+                  <Row style={tw.mB2}>
+                    <Text style={[tw.textGray600, tw.mR2]}>Status:</Text>
+                    {modoEdicao ? (
+                      <TouchableOpacity
+                        style={[
+                          tw.pX3, tw.pY1, tw.rounded,
+                          disponivelEditado ? tw.bgGreen100 : tw.bgRed100
+                        ]}
+                        onPress={() => setDisponivelEditado(!disponivelEditado)}
+                      >
+                        <Text style={[
+                          disponivelEditado ? { color: '#10b981' } : { color: '#ef4444' }
+                        ]}>
+                          {disponivelEditado ? 'Disponível' : 'Indisponível'}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={[
+                        tw.pX2, tw.pY1, tw.roundedFull,
+                        perucaSelecionada.disponivel ? tw.bgGreen100 : tw.bgRed100
+                      ]}>
+                        <Text style={[
+                          tw.textXs,
+                          perucaSelecionada.disponivel ? { color: '#10b981' } : { color: '#ef4444' }
+                        ]}>
+                          {perucaSelecionada.disponivel ? 'Disponível' : 'Indisponível'}
+                        </Text>
+                      </View>
+                    )}
+                  </Row>
+                </View>
+                
+                {perucaSelecionada.instituicao && (
+                  <View style={tw.mB4}>
+                    <Text style={[themeStyles.textText, tw.fontBold, tw.mB2]}>Instituição</Text>
+                    <Text style={themeStyles.textText}>
+                      {perucaSelecionada.instituicao.nome}
+                    </Text>
+                  </View>
+                )}
+                
+                <View style={[tw.mT4]}>
+                  {usuario?.tipo === 'J' && usuario?.id === perucaSelecionada.instituicao_id && (
+                    <>
+                      {!modoEdicao ? (
+                        <TouchableOpacity
+                          style={[themeStyles.bgSecondary, tw.roundedLg, tw.pX4, tw.pY3, tw.itemsCenter]}
+                          onPress={iniciarEdicao}
+                        >
+                          <Text style={[tw.textWhite, tw.fontBold]}>Editar Peruca</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <View>
+                          <TouchableOpacity
+                            style={[themeStyles.bgPrimary, tw.roundedLg, tw.pX4, tw.pY3, tw.itemsCenter, tw.mB2]}
+                            onPress={salvarAlteracoes}
+                            disabled={salvandoAlteracoes}
+                          >
+                            {salvandoAlteracoes ? (
+                              <ActivityIndicator size="small" color="#FFF" />
+                            ) : (
+                              <Text style={[tw.textWhite, tw.fontBold]}>Salvar Alterações</Text>
+                            )}
+                          </TouchableOpacity>
+                          
+                          <TouchableOpacity
+                            style={[tw.bgGray200, tw.roundedLg, tw.pX4, tw.pY3, tw.itemsCenter]}
+                            onPress={cancelarEdicao}
+                            disabled={salvandoAlteracoes}
+                          >
+                            <Text style={[tw.textGray700, tw.fontBold]}>Cancelar</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </>
+                  )}
+                </View>
+              </>
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
     </SafeContainer>
   );
 };

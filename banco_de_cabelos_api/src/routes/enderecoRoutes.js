@@ -31,8 +31,11 @@ const validacoesEndereco = [
     .matches(/^\d{8}$/)
     .withMessage('CEP deve conter apenas números')
 ];
+// Rotas públicas
 router.get('/cep/:cep', buscarCep);
+router.post('/cadastro', validacoesEndereco, criarEndereco);
 
+// Aplicar autenticação para todas as outras rotas
 router.use(auth);
 
 router.get('/', verificarTipo(['J']), listarEnderecos);

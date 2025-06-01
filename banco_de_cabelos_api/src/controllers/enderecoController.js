@@ -75,8 +75,11 @@ class EnderecoController extends BaseController {
   });
 
   criarEndereco = asyncHandler(async (req, res) => {
-    const { bairro, rua, cep, nro, complemento } = req.body;
-    const usuario_id = req.usuario.id;
+    const { bairro, rua, cep, nro, complemento, usuario_id } = req.body;
+    
+    // Se há autenticação, usar o ID do usuário autenticado
+    // Se não há autenticação, usar o usuario_id do body (para cadastro)
+    const finalUsuarioId = req.usuario?.id || usuario_id;
     
     if (!cep || !Validators.isValidCEP(cep)) {
       throw new ApiError('CEP inválido. Use o formato 00000-000 ou 00000000', 400);
@@ -90,7 +93,11 @@ class EnderecoController extends BaseController {
       throw new ApiError(erros, 400);
     }
     
-    const usuario = await Usuario.findByPk(usuario_id);
+    if (!finalUsuarioId) {
+      throw new ApiError('ID do usuário é obrigatório', 400);
+    }
+    
+    const usuario = await Usuario.findByPk(finalUsuarioId);
     if (!usuario) {
       throw new ApiError('Usuário não encontrado', 404);
     }
@@ -99,7 +106,7 @@ class EnderecoController extends BaseController {
       const dadosCep = await this.processarDadosCep(cep);
       
       const dadosEndereco = {
-        usuario_id,
+        usuario_id: finalUsuarioId,
         bairro: validacao.sanitized.bairro || dadosCep.bairro,
         rua: validacao.sanitized.rua || dadosCep.rua,
         cep: dadosCep.cep,

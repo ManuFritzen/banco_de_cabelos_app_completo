@@ -9,7 +9,9 @@ import * as Yup from 'yup';
 import CampoEntrada from '../../components/comuns/CampoEntrada';
 import CampoEntradaComMascara from '../../components/comuns/CampoEntradaComMascara';
 import Botao from '../../components/comuns/Botao';
+import FormularioEndereco from '../../components/comuns/FormularioEndereco';
 import { autenticacaoServico } from '../../servicos/api/autenticacao';
+import { enderecoServico } from '../../servicos/api/endereco';
 import { apenasNumeros } from '../../servicos/util/mascaraUtil';
 import {
   SafeContainer,
@@ -17,7 +19,6 @@ import {
   Container,
   BotaoIcone,
   Card,
-  Titulo,
   TextoLink
 } from '../../styles/componentes';
 import tw from '../../styles/tailwind';
@@ -29,6 +30,17 @@ interface FormularioCadastroValues {
   telefone: string;
   senha: string;
   confirmarSenha: string;
+}
+
+interface FormularioEnderecoValues {
+  cep: string;
+  rua: string;
+  numero: string;
+  complemento?: string;
+  bairro: string;
+  cidade: string;
+  estado: string;
+  ibge?: string;
 }
 
 const esquemaValidacao = Yup.object().shape({
@@ -53,16 +65,28 @@ const esquemaValidacao = Yup.object().shape({
 const CadastroInstituicaoTela: React.FC = () => {
   const navigation = useNavigation<any>();
   const [mensagemErro, setMensagemErro] = useState<string | null>(null);
+  const [etapaAtual, setEtapaAtual] = useState<1 | 2>(1);
+  const [dadosInstituicao, setDadosInstituicao] = useState<FormularioCadastroValues | null>(null);
+  const [usuarioId, setUsuarioId] = useState<number | null>(null);
     
   const voltar = () => {
     navigation.goBack();
   };
   
-  const handleSubmit = async (values: FormularioCadastroValues, { setSubmitting }: any) => {
+  const voltarEtapa = () => {
+    if (etapaAtual === 2) {
+      setEtapaAtual(1);
+      setMensagemErro(null);
+    } else {
+      voltar();
+    }
+  };
+  
+  const handleSubmitInstituicao = async (values: FormularioCadastroValues, { setSubmitting }: any) => {
     try {
       setMensagemErro(null);
       
-      const dadosInstituicao = {
+      const dadosInstituicaoCadastro = {
         nome: values.nome,
         email: values.email,
         senha: values.senha,
@@ -72,13 +96,22 @@ const CadastroInstituicaoTela: React.FC = () => {
       };
       
       // Enviar para a API
-      await autenticacaoServico.cadastrar(dadosInstituicao);
+      const response = await autenticacaoServico.cadastrar(dadosInstituicaoCadastro);
       
-      Alert.alert(
-        'Cadastro realizado',
-        'Sua instituição foi cadastrada com sucesso. Faça login para continuar.',
-        [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
-      );
+      console.log('Resposta do cadastro:', response.data);
+      
+      // Salvar dados da instituição e id para próxima etapa
+      setDadosInstituicao(values);
+      if (response.data?.id) {
+        setUsuarioId(response.data.id);
+        console.log('Usuario ID salvo:', response.data.id);
+      } else {
+        console.error('ID do usuário não encontrado na resposta:', response.data);
+        throw new Error('Erro ao obter ID do usuário criado');
+      }
+      
+      // Avançar para próxima etapa
+      setEtapaAtual(2);
     } catch (erro: any) {
       console.error('Erro ao cadastrar instituição:', erro);
       
@@ -105,6 +138,37 @@ const CadastroInstituicaoTela: React.FC = () => {
       setSubmitting(false);
     }
   };
+
+  const handleSubmitEndereco = async (values: FormularioEnderecoValues) => {
+    try {
+      setMensagemErro(null);
+      
+      if (!usuarioId) {
+        throw new Error('ID do usuário não encontrado');
+      }
+      
+      const dadosEndereco = {
+        ...values,
+        usuario_id: usuarioId
+      };
+      
+      await enderecoServico.criarEndereco(dadosEndereco);
+      
+      Alert.alert(
+        'Cadastro realizado',
+        'Sua instituição foi cadastrada com sucesso. Faça login para continuar.',
+        [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
+      );
+    } catch (erro: any) {
+      console.error('Erro ao cadastrar endereço:', erro);
+      
+      let mensagem = erro.response?.data?.message || 
+                     erro.response?.data?.error || 
+                     'Ocorreu um erro ao cadastrar o endereço. Tente novamente.';
+      
+      setMensagemErro(mensagem);
+    }
+  };
   
   return (
     <Container style={tw.flex1}>
@@ -124,7 +188,7 @@ const CadastroInstituicaoTela: React.FC = () => {
       <SafeContainer style={tw.flex1}>
         <ScrollContainer keyboardShouldPersistTaps="handled" style={tw.flex1} contentContainerStyle={tw.flexGrow}>
           <Container style={tw.p6}>
-            <BotaoIcone onPress={voltar}>
+            <BotaoIcone onPress={voltarEtapa}>
               <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
             </BotaoIcone>
 
@@ -132,21 +196,25 @@ const CadastroInstituicaoTela: React.FC = () => {
               <Text style={[tw.textWhite, tw.text2xl, tw.fontBold, tw.textCenter]}>
                 Cadastro de Instituição
               </Text>
+              <Text style={[tw.textWhite, tw.textBase, tw.mT2, { opacity: 0.8 }]}>
+                Etapa {etapaAtual} de 2
+              </Text>
             </View>
           
-          <Formik
-            initialValues={{
-              nome: '',
-              email: '',
-              cnpj: '',
-              telefone: '',
-              senha: '',
-              confirmarSenha: '',
-            }}
-            validationSchema={esquemaValidacao}
-            onSubmit={handleSubmit}
-          >
-            {({ handleSubmit, isSubmitting }) => (
+          {etapaAtual === 1 ? (
+            <Formik
+              initialValues={dadosInstituicao || {
+                nome: '',
+                email: '',
+                cnpj: '',
+                telefone: '',
+                senha: '',
+                confirmarSenha: '',
+              }}
+              validationSchema={esquemaValidacao}
+              onSubmit={handleSubmitInstituicao}
+            >
+              {({ handleSubmit, isSubmitting }) => (
               <Card style={[tw.border, { borderColor: 'rgba(255, 255, 255, 0.15)', borderWidth: 1, borderRadius: 16 }, tw.p6]}>
                 {mensagemErro && (
                   <View style={[{ backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA', borderRadius: 8 }, tw.p4, tw.mB4]}>
@@ -199,7 +267,7 @@ const CadastroInstituicaoTela: React.FC = () => {
                 />
                 
                 <Botao
-                  titulo="CADASTRAR INSTITUIÇÃO"
+                  titulo="PRÓXIMA ETAPA"
                   onPress={handleSubmit}
                   carregando={isSubmitting}
                   variante="secundario"
@@ -221,6 +289,23 @@ const CadastroInstituicaoTela: React.FC = () => {
               </Card>
             )}
           </Formik>
+          ) : (
+            <Card style={[tw.border, { borderColor: 'rgba(255, 255, 255, 0.15)', borderWidth: 1, borderRadius: 16 }, tw.p6]}>
+              {mensagemErro && (
+                <View style={[{ backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA', borderRadius: 8 }, tw.p4, tw.mB4]}>
+                  <Text style={[{ color: '#EF4444' }, tw.textCenter]}>
+                    {mensagemErro}
+                  </Text>
+                </View>
+              )}
+              
+              <FormularioEndereco
+                onSubmit={handleSubmitEndereco}
+                botaoTexto="FINALIZAR CADASTRO"
+                mostrarBotao={true}
+              />
+            </Card>
+          )}
           </Container>
 
           <View style={[tw.wFull, tw.pX10, tw.pY6]}>

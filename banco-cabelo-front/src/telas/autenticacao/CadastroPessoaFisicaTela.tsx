@@ -9,7 +9,9 @@ import { StatusBar } from 'react-native';
 import CampoEntrada from '../../components/comuns/CampoEntrada';
 import CampoEntradaComMascara from '../../components/comuns/CampoEntradaComMascara';
 import Botao from '../../components/comuns/Botao';
+import FormularioEndereco from '../../components/comuns/FormularioEndereco';
 import { autenticacaoServico } from '../../servicos/api/autenticacao';
+import { enderecoServico } from '../../servicos/api/endereco';
 import { apenasNumeros } from '../../servicos/util/mascaraUtil';
 import {
   SafeContainer,
@@ -28,6 +30,17 @@ interface FormularioCadastroValues {
   telefone: string;
   senha: string;
   confirmarSenha: string;
+}
+
+interface FormularioEnderecoValues {
+  cep: string;
+  rua: string;
+  numero: string;
+  complemento?: string;
+  bairro: string;
+  cidade: string;
+  estado: string;
+  ibge?: string;
 }
 
 const esquemaValidacao = Yup.object().shape({
@@ -51,16 +64,19 @@ const esquemaValidacao = Yup.object().shape({
 const CadastroPessoaFisicaTela: React.FC = () => {
   const navigation = useNavigation<any>();
   const [mensagemErro, setMensagemErro] = useState<string | null>(null);
+  const [etapaAtual, setEtapaAtual] = useState<1 | 2>(1);
+  const [dadosUsuario, setDadosUsuario] = useState<FormularioCadastroValues | null>(null);
+  const [usuarioId, setUsuarioId] = useState<number | null>(null);
   
   const voltar = () => {
     navigation.goBack();
   };
   
-  const handleSubmit = async (values: FormularioCadastroValues, { setSubmitting }: any) => {
+  const handleSubmitUsuario = async (values: FormularioCadastroValues, { setSubmitting }: any) => {
     try {
       setMensagemErro(null);
       
-      const dadosUsuario = {
+      const dadosUsuarioCadastro = {
         nome: values.nome,
         email: values.email,
         senha: values.senha,
@@ -69,13 +85,22 @@ const CadastroPessoaFisicaTela: React.FC = () => {
         telefone: values.telefone ? apenasNumeros(values.telefone) : undefined
       };
       
-      await autenticacaoServico.cadastrar(dadosUsuario);
+      const response = await autenticacaoServico.cadastrar(dadosUsuarioCadastro);
       
-      Alert.alert(
-        'Cadastro realizado',
-        'Seu cadastro foi realizado com sucesso. Faça login para continuar.',
-        [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
-      );
+      console.log('Resposta do cadastro:', response.data);
+      
+      // Salvar dados do usuário e id para próxima etapa
+      setDadosUsuario(values);
+      if (response.data?.id) {
+        setUsuarioId(response.data.id);
+        console.log('Usuario ID salvo:', response.data.id);
+      } else {
+        console.error('ID do usuário não encontrado na resposta:', response.data);
+        throw new Error('Erro ao obter ID do usuário criado');
+      }
+      
+      // Avançar para próxima etapa
+      setEtapaAtual(2);
     } catch (erro: any) {
       console.error('Erro ao cadastrar:', erro);
       
@@ -84,9 +109,9 @@ const CadastroPessoaFisicaTela: React.FC = () => {
                      'Ocorreu um erro ao realizar o cadastro. Tente novamente.';
       
       if (mensagem.includes('cpf must be unique') || mensagem.includes('CPF já cadastrado')) {
-        mensagem = 'Este CPF já está cadastrado no sistema. Por favor, utilize outro CPF ou faça login caso já possua uma conta.';
-      } else if (mensagem.includes('email must be unique') || mensagem.includes('Email já cadastrado')) {
-        mensagem = 'Este e-mail já está cadastrado no sistema. Por favor, utilize outro e-mail ou faça login caso já possua uma conta.';
+        mensagem = 'Este CPF já está cadastrado no sistema. Se você já possui uma conta, faça login.';
+      } else if (mensagem.includes('email must be unique') || mensagem.includes('Email já cadastrado') || mensagem.includes('e-mail já está cadastrado')) {
+        mensagem = 'Este e-mail já está cadastrado no sistema. Se você já possui uma conta, faça login.';
       } else if (mensagem.includes('CPF inválido')) {
         mensagem = 'O CPF informado é inválido. Por favor, verifique se o número é válido e tente novamente.';
       } else if (mensagem.includes('telefone')) {
@@ -98,6 +123,46 @@ const CadastroPessoaFisicaTela: React.FC = () => {
       setMensagemErro(mensagem);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleSubmitEndereco = async (values: FormularioEnderecoValues) => {
+    try {
+      setMensagemErro(null);
+      
+      if (!usuarioId) {
+        throw new Error('ID do usuário não encontrado');
+      }
+      
+      const dadosEndereco = {
+        ...values,
+        usuario_id: usuarioId
+      };
+      
+      await enderecoServico.criarEndereco(dadosEndereco);
+      
+      Alert.alert(
+        'Cadastro realizado',
+        'Seu cadastro foi realizado com sucesso. Faça login para continuar.',
+        [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
+      );
+    } catch (erro: any) {
+      console.error('Erro ao cadastrar endereço:', erro);
+      
+      let mensagem = erro.response?.data?.message || 
+                     erro.response?.data?.error || 
+                     'Ocorreu um erro ao cadastrar o endereço. Tente novamente.';
+      
+      setMensagemErro(mensagem);
+    }
+  };
+
+  const voltarEtapa = () => {
+    if (etapaAtual === 2) {
+      setEtapaAtual(1);
+      setMensagemErro(null);
+    } else {
+      voltar();
     }
   };
   
@@ -119,7 +184,7 @@ const CadastroPessoaFisicaTela: React.FC = () => {
       <SafeContainer style={tw.flex1}>
         <ScrollContainer keyboardShouldPersistTaps="handled" style={tw.flex1} contentContainerStyle={tw.flexGrow}>
           <Container style={tw.p6}>
-            <BotaoIcone onPress={voltar}>
+            <BotaoIcone onPress={voltarEtapa}>
               <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
             </BotaoIcone>
 
@@ -127,95 +192,116 @@ const CadastroPessoaFisicaTela: React.FC = () => {
               <Text style={[tw.textWhite, tw.text2xl, tw.fontBold, tw.textCenter]}>
                 Cadastro de Pessoa Física
               </Text>
+              <Text style={[tw.textWhite, tw.textBase, tw.mT2, { opacity: 0.8 }]}>
+                Etapa {etapaAtual} de 2
+              </Text>
             </View>
           
-          <Formik
-            initialValues={{
-              nome: '',
-              email: '',
-              cpf: '',
-              telefone: '',
-              senha: '',
-              confirmarSenha: '',
-            }}
-            validationSchema={esquemaValidacao}
-            onSubmit={handleSubmit}
-          >
-            {({ handleSubmit, isSubmitting }) => (
-              <Card style={[tw.border, { borderColor: 'rgba(255, 255, 255, 0.15)', borderWidth: 1, borderRadius: 16 }, tw.p6]}>
-                {mensagemErro && (
-                  <View style={[{ backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA', borderRadius: 8 }, tw.p4, tw.mB4]}>
-                    <Text style={[{ color: '#EF4444' }, tw.textCenter]}>
-                      {mensagemErro}
-                    </Text>
-                  </View>
-                )}
-                
-                <CampoEntrada
-                  name="nome"
-                  label="Nome completo"
-                  placeholder="Digite seu nome completo"
-                  autoCapitalize="words"
-                />
-                
-                <CampoEntrada
-                  name="email"
-                  label="E-mail"
-                  placeholder="Digite seu e-mail"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-                
-                <CampoEntradaComMascara
-                  name="cpf"
-                  label="CPF"
-                  tipoMascara="cpf"
-                  verificarUnico={true}
-                />
-                
-                <CampoEntradaComMascara
-                  name="telefone"
-                  label="Telefone"
-                  tipoMascara="telefone"
-                />
-                
-                <CampoEntrada
-                  name="senha"
-                  label="Senha"
-                  placeholder="Mínimo de 6 caracteres"
-                  seguro
-                />
-                
-                <CampoEntrada
-                  name="confirmarSenha"
-                  label="Confirmar Senha"
-                  placeholder="Confirme sua senha"
-                  seguro
-                />
-                
-                <Botao
-                  titulo="CRIAR CONTA"
-                  onPress={handleSubmit}
-                  carregando={isSubmitting}
-                  variante="secundario"
-                  larguraTotal
-                  tamanhoTexto="normal"
-                  style={{ backgroundColor: '#6366F1', shadowOpacity: 0.3, marginTop: 16, marginBottom: 24 }}
-                />
+          {etapaAtual === 1 ? (
+            <Formik
+              initialValues={dadosUsuario || {
+                nome: '',
+                email: '',
+                cpf: '',
+                telefone: '',
+                senha: '',
+                confirmarSenha: '',
+              }}
+              validationSchema={esquemaValidacao}
+              onSubmit={handleSubmitUsuario}
+            >
+              {({ handleSubmit, isSubmitting }) => (
+                <Card style={[tw.border, { borderColor: 'rgba(255, 255, 255, 0.15)', borderWidth: 1, borderRadius: 16 }, tw.p6]}>
+                  {mensagemErro && (
+                    <View style={[{ backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA', borderRadius: 8 }, tw.p4, tw.mB4]}>
+                      <Text style={[{ color: '#EF4444' }, tw.textCenter]}>
+                        {mensagemErro}
+                      </Text>
+                    </View>
+                  )}
+                  
+                  <CampoEntrada
+                    name="nome"
+                    label="Nome completo"
+                    placeholder="Digite seu nome completo"
+                    autoCapitalize="words"
+                  />
+                  
+                  <CampoEntrada
+                    name="email"
+                    label="E-mail"
+                    placeholder="Digite seu e-mail"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                  
+                  <CampoEntradaComMascara
+                    name="cpf"
+                    label="CPF"
+                    tipoMascara="cpf"
+                    verificarUnico={true}
+                  />
+                  
+                  <CampoEntradaComMascara
+                    name="telefone"
+                    label="Telefone"
+                    tipoMascara="telefone"
+                  />
+                  
+                  <CampoEntrada
+                    name="senha"
+                    label="Senha"
+                    placeholder="Mínimo de 6 caracteres"
+                    seguro
+                  />
+                  
+                  <CampoEntrada
+                    name="confirmarSenha"
+                    label="Confirmar Senha"
+                    placeholder="Confirme sua senha"
+                    seguro
+                  />
+                  
+                  <Botao
+                    titulo="PRÓXIMA ETAPA"
+                    onPress={handleSubmit}
+                    carregando={isSubmitting}
+                    variante="secundario"
+                    larguraTotal
+                    tamanhoTexto="normal"
+                    style={{ backgroundColor: '#6366F1', shadowOpacity: 0.3, marginTop: 16, marginBottom: 24 }}
+                  />
 
-                <View style={[tw.flexRow, tw.justifyCenter]}>
-                  <Text style={{ color: '#4B5563' }}>
-                    Já possui uma conta?{' '}
+                  <View style={[tw.flexRow, tw.justifyCenter]}>
+                    <Text style={{ color: '#4B5563' }}>
+                      Já possui uma conta?{' '}
+                    </Text>
+                    <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                      <TextoLink style={tw.mL1}>
+                        Faça login
+                      </TextoLink>
+                    </TouchableOpacity>
+                  </View>
+                </Card>
+              )}
+            </Formik>
+          ) : (
+            <Card style={[tw.border, { borderColor: 'rgba(255, 255, 255, 0.15)', borderWidth: 1, borderRadius: 16 }, tw.p6]}>
+              {mensagemErro && (
+                <View style={[{ backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA', borderRadius: 8 }, tw.p4, tw.mB4]}>
+                  <Text style={[{ color: '#EF4444' }, tw.textCenter]}>
+                    {mensagemErro}
                   </Text>
-                  <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                    <TextoLink style={tw.mL1}>
-                      Faça login
-                    </TextoLink>
-                  </TouchableOpacity>
                 </View>
-              </Card>
-            )}
-          </Formik>
+              )}
+              
+              <FormularioEndereco
+                onSubmit={handleSubmitEndereco}
+                botaoTexto="FINALIZAR CADASTRO"
+                mostrarBotao={true}
+              />
+            </Card>
+          )}
           </Container>
 
           <View style={[tw.wFull, tw.pX10, tw.pY6]}>

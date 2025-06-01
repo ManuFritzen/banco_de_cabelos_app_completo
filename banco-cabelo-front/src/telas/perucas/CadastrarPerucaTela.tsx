@@ -61,40 +61,31 @@ const CadastrarPerucaTela: React.FC = () => {
         console.log('Resposta cores:', coresResp);
         console.log('Resposta tipos:', tiposResp);
         
-        if (coresResp.data && coresResp.data.data && Array.isArray(coresResp.data.data)) {
+        if (coresResp.data && coresResp.data.success && Array.isArray(coresResp.data.data)) {
           setCores(coresResp.data.data);
           console.log('Cores definidas:', coresResp.data.data);
         } else {
           console.warn('Formato inesperado da resposta de cores:', coresResp.data);
+          throw new Error('Formato inválido para cores');
         }
         
-        if (tiposResp.data && tiposResp.data.data && Array.isArray(tiposResp.data.data)) {
+        if (tiposResp.data && tiposResp.data.success && Array.isArray(tiposResp.data.data)) {
           setTiposPeruca(tiposResp.data.data);
           console.log('Tipos definidos:', tiposResp.data.data);
         } else {
           console.warn('Formato inesperado da resposta de tipos:', tiposResp.data);
+          throw new Error('Formato inválido para tipos de peruca');
         }
       } catch (erro) {
         console.error('Erro ao carregar dados:', erro);
-        // Fallback para dados mock em caso de erro
-        const tiposMock = [
-          { id: 1, nome: 'Peruca Natural', sigla: 'PN' },
-          { id: 2, nome: 'Peruca Sintética', sigla: 'PS' },
-          { id: 3, nome: 'Peruca Mista', sigla: 'PM' },
-        ];
-        
-        const coresMock = [
-          { id: 1, nome: 'Preto' },
-          { id: 2, nome: 'Castanho Escuro' },
-          { id: 3, nome: 'Castanho Claro' },
-          { id: 4, nome: 'Loiro' },
-          { id: 5, nome: 'Ruivo' },
-          { id: 6, nome: 'Grisalho' },
-        ];
-        
-        setTiposPeruca(tiposMock);
-        setCores(coresMock);
-        console.log('Usando dados mock:', { tiposMock, coresMock });
+        Alert.alert(
+          'Erro ao Carregar Dados',
+          'Não foi possível carregar os tipos de peruca e cores do servidor. Verifique sua conexão e tente novamente.',
+          [
+            { text: 'Tentar Novamente', onPress: () => carregarDados() },
+            { text: 'Voltar', onPress: () => navigation.goBack() }
+          ]
+        );
       }
     };
     
@@ -325,17 +316,7 @@ const CadastrarPerucaTela: React.FC = () => {
   };
   
   return (
-    <SafeContainer style={themeStyles.bgBackground}>
-      <StatusBar backgroundColor={themeStyles.color.primary} barStyle="light-content" />
-      <Row style={[themeStyles.bgPrimary, tw.pX4, tw.pY3]}>
-        <TouchableOpacity onPress={voltar}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={[tw.textWhite, tw.textLg, tw.fontBold, tw.mL3]}>
-          Cadastrar Peruca
-        </Text>
-      </Row>
-      
+    <SafeContainer style={themeStyles.bgBackground}>      
       <TouchableOpacity
         style={[themeStyles.bgPrimary, tw.pX4, tw.pY4]}
         onPress={abrirModal}

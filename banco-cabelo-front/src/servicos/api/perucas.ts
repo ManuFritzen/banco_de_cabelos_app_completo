@@ -114,13 +114,19 @@ export const perucasServico = {
     }
   },
   async atualizarPeruca(id: number, dados: Partial<NovaPeruca>) {
-    const formData = gerarFormData(dados);
+    // Se há uma foto, usa FormData
+    if (dados.foto_peruca) {
+      const formData = gerarFormData(dados);
+      
+      return cliente.put(`/perucas/${id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+    }
     
-    return cliente.put(`/perucas/${id}`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
+    // Caso contrário, envia como JSON normal
+    return cliente.put(`/perucas/${id}`, dados);
   },
   async excluirPeruca(id: number) {
     return cliente.delete(`/perucas/${id}`);

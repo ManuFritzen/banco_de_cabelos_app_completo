@@ -275,18 +275,10 @@ const SolicitacoesPerucaInstituicaoTela: React.FC = () => {
 
   return (
     <SafeContainer style={themeStyles.bgBackground}>
-      <Row style={[themeStyles.bgPrimary, tw.pX4, tw.pY3]}>
-        <TouchableOpacity onPress={() => navigation.navigate('TabNavegacao')}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={[tw.textWhite, tw.textLg, tw.fontBold, tw.mL3]}>
-          Solicitações de Perucas
-        </Text>
-      </Row>
 
       <View style={[{ backgroundColor: '#f8f9fa' }]}>
-        <View style={[tw.pX4, tw.pY2]}>
-          <View style={[tw.flexRow, tw.itemsCenter, tw.bgWhite, tw.rounded, tw.pX3, tw.pY1]}>
+        <View style={[tw.pX4]}>
+          <View style={[tw.flexRow, tw.itemsCenter, tw.bgWhite, tw.rounded, tw.pX3]}>
             <Ionicons name="search" size={20} color="#999" style={tw.mR2} />
             <TextInput
               placeholder="Buscar por nome..."

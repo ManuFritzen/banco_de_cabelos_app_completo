@@ -1,4 +1,4 @@
-const { Solicitacao, StatusSolicitacao, Usuario } = require('../models');
+const { Solicitacao, StatusSolicitacao, Usuario, SolicitacaoInstituicao } = require('../models');
 const { ApiError, asyncHandler, handleSequelizeError } = require('../utils/errorHandler');
 const jwt = require('jsonwebtoken');
 const { upload, fileToByteaBuffer } = require('../middlewares/uploadMiddleware');
@@ -16,6 +16,27 @@ class SolicitacaoController extends BaseController {
       {
         model: StatusSolicitacao,
         attributes: ['id', 'nome']
+      },
+      {
+        model: Usuario,
+        as: 'PessoaFisica',
+        attributes: ['id', 'nome', 'email', 'telefone']
+      },
+      {
+        model: SolicitacaoInstituicao,
+        as: 'SolicitacoesInstituicao',
+        include: [
+          {
+            model: Usuario,
+            as: 'Instituicao',
+            attributes: ['id', 'nome']
+          },
+          {
+            model: StatusSolicitacao,
+            as: 'StatusSolicitacao',
+            attributes: ['id', 'nome']
+          }
+        ]
       }
     ];
   }
@@ -75,6 +96,67 @@ class SolicitacaoController extends BaseController {
     }
   }
 
+
+  async adicionarContadores(solicitacoes) {
+    const solicitacoesComContadores = await Promise.all(
+      solicitacoes.map(async (solicitacao) => {
+        const solicitacaoJson = solicitacao.toJSON ? solicitacao.toJSON() : solicitacao;
+        
+        // Contar análises por status
+        const contadores = await SolicitacaoInstituicao.findAll({
+          where: { solicitacao_id: solicitacaoJson.id },
+          attributes: [
+            'status_solicitacao_id',
+            [require('sequelize').fn('COUNT', require('sequelize').col('id')), 'total']
+          ],
+          group: ['status_solicitacao_id'],
+          raw: true
+        });
+        
+        // Organizar contadores
+        let totalAnalises = 0;
+        let pendentes = 0;
+        let em_analise = 0;
+        let aprovadas = 0;
+        let recusadas = 0;
+        
+        contadores.forEach(contador => {
+          const total = parseInt(contador.total);
+          totalAnalises += total;
+          
+          switch (contador.status_solicitacao_id) {
+            case 1: // Pendente
+              pendentes = total;
+              break;
+            case 2: // Em análise
+              em_analise = total;
+              break;
+            case 3: // Aprovada
+              aprovadas = total;
+              break;
+            case 4: // Recusada
+              recusadas = total;
+              break;
+          }
+        });
+        
+        return {
+          ...solicitacaoJson,
+          contadores: {
+            total_analises: totalAnalises,
+            pendentes,
+            em_analise,
+            aprovadas,
+            recusadas,
+            tem_analises: totalAnalises > 0
+          }
+        };
+      })
+    );
+    
+    return solicitacoesComContadores;
+  }
+
   listarSolicitacoes = asyncHandler(async (req, res) => {
     const { page, limit, offset } = this.getPaginationParams(req);
     const where = this.construirFiltrosSolicitacao(req.query);
@@ -87,7 +169,14 @@ class SolicitacaoController extends BaseController {
       offset
     });
     
-    this.sendPaginatedResponse(res, solicitacoes, page, limit);
+    const solicitacoesComContadores = await this.adicionarContadores(solicitacoes.rows);
+    
+    const resultado = {
+      count: solicitacoes.count,
+      rows: solicitacoesComContadores
+    };
+    
+    this.sendPaginatedResponse(res, resultado, page, limit);
   });
 
   obterSolicitacaoPorId = asyncHandler(async (req, res) => {
@@ -107,9 +196,9 @@ class SolicitacaoController extends BaseController {
       req.usuario.tipo
     );
     
-    const solicitacaoJSON = JSON.parse(JSON.stringify(solicitacao));
+    const [solicitacaoComContadores] = await this.adicionarContadores([solicitacao]);
     
-    this.sendSuccess(res, solicitacaoJSON);
+    this.sendSuccess(res, solicitacaoComContadores);
   });
 
   listarSolicitacoesPorUsuario = asyncHandler(async (req, res) => {
@@ -237,7 +326,6 @@ class SolicitacaoController extends BaseController {
       
       const solicitacaoAtualizada = await this.buscarSolicitacaoCompleta(idValidado);
       
-      // Criar notificação se o status mudou
       if (statusAnterior !== novoStatus) {
         console.log('Status mudou de', statusAnterior, 'para', novoStatus);
         console.log('Solicitação atualizada:', solicitacaoAtualizada);

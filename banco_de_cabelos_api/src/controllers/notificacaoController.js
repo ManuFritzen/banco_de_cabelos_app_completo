@@ -235,6 +235,31 @@ class NotificacaoController extends BaseController {
       usuario_origem_id: doador.id
     });
   }
+
+  static async criarNotificacaoAnaliseStatus(analise, status, nomeInstituicao) {
+    const titulos = {
+      'Pendente': 'Análise iniciada',
+      'Em Análise': 'Análise em andamento',
+      'Aprovada': 'Análise aprovada',
+      'Recusada': 'Análise recusada'
+    };
+
+    const mensagens = {
+      'Pendente': `${nomeInstituicao} iniciou a análise da sua solicitação de peruca`,
+      'Em Análise': `${nomeInstituicao} está analisando sua solicitação de peruca`,
+      'Aprovada': `${nomeInstituicao} aprovou sua solicitação de peruca!`,
+      'Recusada': `${nomeInstituicao} recusou sua solicitação de peruca`
+    };
+
+    await this.criarNotificacao({
+      usuario_id: analise.Solicitacao?.pessoa_fisica_id,
+      tipo: 'analise_status',
+      titulo: titulos[status] || 'Atualização de análise',
+      mensagem: mensagens[status] || `${nomeInstituicao} atualizou o status da sua análise para: ${status}`,
+      solicitacao_id: analise.solicitacao_id,
+      usuario_origem_id: analise.instituicao_id
+    });
+  }
 }
 
 module.exports = NotificacaoController;

@@ -35,6 +35,7 @@ import SolicitacaoPerucaTela from '../telas/solicitacoes/SolicitacaoPerucaTela';
 import MinhasSolicitacoesTela from '../telas/solicitacoes/MinhasSolicitacoesTela';
 import DetalhesSolicitacaoTela from '../telas/solicitacoes/DetalhesSolicitacaoTela';
 import SolicitacoesPerucaInstituicaoTela from '../telas/solicitacoes/SolicitacoesPerucaInstituicaoTela';
+import MinhasAnalisesTela from '../telas/solicitacoes/MinhasAnalisesTela';
 
 // Telas do Fórum
 import NovaPublicacaoTela from '../telas/forum/NovaPublicacaoTela';
@@ -74,6 +75,7 @@ type NavegacaoPrincipalParamList = {
   SolicitacaoPeruca: undefined;
   MinhasSolicitacoes: undefined;
   SolicitacoesPerucaInstituicao: undefined;
+  MinhasAnalises: undefined;
   DetalhesSolicitacao: { id: number };
   Notificacoes: undefined;
   EmConstrucao: { titulo?: string };
@@ -211,6 +213,11 @@ const NavegacaoPrincipal = () => {
         name="SolicitacoesPerucaInstituicao" 
         component={SolicitacoesPerucaInstituicaoTela} 
         options={{ title: 'Solicitações de Perucas' }} 
+      />
+      <PrincipalStack.Screen 
+        name="MinhasAnalises" 
+        component={MinhasAnalisesTela} 
+        options={{ title: 'Minhas Análises' }} 
       />
       <PrincipalStack.Screen 
         name="Notificacoes" 

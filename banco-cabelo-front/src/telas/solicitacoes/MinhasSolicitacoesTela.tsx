@@ -123,17 +123,11 @@ const MinhasSolicitacoesTela: React.FC = () => {
         style={[tw.bgWhite, tw.p4, tw.roundedLg, tw.shadow, tw.mB4]}
         onPress={() => navegarParaDetalhesSolicitacao(item.id)}
       >
-        <Row style={[tw.justifyBetween, tw.mB2]}>
-          <View style={[tw.pX2, tw.pY1, tw.roundedFull, estiloStatus.bg]}>
-            <Text style={[tw.textXs, tw.fontMedium, estiloStatus.text]}>
-              {item.StatusSolicitacao?.nome || getNomeStatus(item.status_solicitacao_id)}
-            </Text>
-          </View>
-
+        <View style={[tw.mB2]}>
           <Text style={[tw.textXs, tw.textGray500]}>
             {formatarData(item.data_hora)}
           </Text>
-        </Row>
+        </View>
 
         {item.observacao && (
           <View style={tw.mB3}>

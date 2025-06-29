@@ -4,7 +4,7 @@ import { CommonActions } from '@react-navigation/native';
 
 // Use 10.0.2.2 para emulador Android, ou o IP da sua máquina para dispositivo físico
 // const API_URL = 'http://192.168.2.100:3000/api'; // Para emulador Android
-const API_URL = 'http://192.168.2.108:3000/api'; // Para dispositivo físico
+const API_URL = 'http://192.168.2.102:3000/api'; // Para dispositivo físico
 
 // Cliente axios para as requisições
 const cliente = axios.create({

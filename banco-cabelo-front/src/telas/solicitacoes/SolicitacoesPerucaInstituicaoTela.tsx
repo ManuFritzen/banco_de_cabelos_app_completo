@@ -35,6 +35,14 @@ interface Solicitacao {
     id: number;
     nome: string;
   };
+  contadores?: {
+    total_analises: number;
+    pendentes: number;
+    em_analise: number;
+    aprovadas: number;
+    recusadas: number;
+    tem_analises: boolean;
+  };
   usuario: {
     id: number;
     nome: string;
@@ -47,7 +55,6 @@ const SolicitacoesPerucaInstituicaoTela: React.FC = () => {
   const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [atualizando, setAtualizando] = useState(false);
-  const [statusFiltro, setStatusFiltro] = useState<number | null>(null);
   const [termoBusca, setTermoBusca] = useState('');
   const [solicitacoesFiltradas, setSolicitacoesFiltradas] = useState<Solicitacao[]>([]);
   
@@ -62,12 +69,6 @@ const SolicitacoesPerucaInstituicaoTela: React.FC = () => {
       const params: any = {};
       
       try {
-        if (statusFiltro !== null) {
-          params.status_solicitacao_id = statusFiltro;
-        } else {
-          delete params.status_solicitacao_id;
-        }
-        
         const resposta = await solicitacoesServico.listarSolicitacoes(params);
         
         const solicitacoesFormatadas = resposta.data.data?.map((item: any) => ({
@@ -86,7 +87,7 @@ const SolicitacoesPerucaInstituicaoTela: React.FC = () => {
       setCarregando(false);
       setAtualizando(false);
     }
-  }, [statusFiltro, usuario]);
+  }, [usuario]);
 
   const atualizarLista = () => {
     setAtualizando(true);
@@ -136,24 +137,6 @@ const SolicitacoesPerucaInstituicaoTela: React.FC = () => {
     }
   };
 
-  const getNomeStatus = (statusId: number) => {
-    switch (statusId) {
-      case 1:
-        return 'Pendente';
-      case 2:
-        return 'Em análise';
-      case 3:
-        return 'Aprovada';
-      case 4:
-        return 'Rejeitada';
-      case 5:
-        return 'Concluída';
-      case 6:
-        return 'Cancelada';
-      default:
-        return `Status ${statusId}`;
-    }
-  };
 
   const renderItem = ({ item }: { item: Solicitacao }) => {
     const estiloStatus = getEstiloStatus(item.status_solicitacao_id);
@@ -163,17 +146,11 @@ const SolicitacoesPerucaInstituicaoTela: React.FC = () => {
         style={[tw.bgWhite, tw.p4, tw.roundedLg, tw.shadow, tw.mB4]}
         onPress={() => irParaDetalhes(item.id)}
       >
-        <Row style={[tw.justifyBetween, tw.mB2]}>
-          <View style={[tw.pX2, tw.pY1, tw.roundedFull, estiloStatus.bg]}>
-            <Text style={[tw.textXs, tw.fontMedium, estiloStatus.text]}>
-              {item.StatusSolicitacao?.nome || getNomeStatus(item.status_solicitacao_id)}
-            </Text>
-          </View>
-          
+        <View style={[tw.mB2]}>
           <Text style={[tw.textXs, tw.textGray500]}>
             {format(new Date(item.data_hora || item.data_solicitacao), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
           </Text>
-        </Row>
+        </View>
         
         <View style={tw.mB2}>
           <Text style={[tw.textLg, tw.fontMedium]}>{item.usuario?.nome || 'Usuário'}</Text>
@@ -186,6 +163,42 @@ const SolicitacoesPerucaInstituicaoTela: React.FC = () => {
                 ? item.observacao.substring(0, 100) + '...'
                 : item.observacao}
             </Text>
+          </View>
+        )}
+        
+        {item.contadores && item.contadores.tem_analises && (
+          <View style={[tw.mB3, tw.pY2, tw.pX3, tw.bgGray100, tw.roundedLg]}>
+            <Text style={[tw.textXs, tw.textGray600, tw.mB1]}>Status das análises:</Text>
+            <Row style={[tw.flexWrap]}>
+              {item.contadores.pendentes > 0 && (
+                <View style={[tw.bgYellow100, tw.pX2, tw.pY1, tw.roundedFull, tw.mR2, tw.mB1]}>
+                  <Text style={[tw.textXs, { color: '#d97706' }]}>
+                    ⏳ {item.contadores.pendentes} pendente{item.contadores.pendentes > 1 ? 's' : ''}
+                  </Text>
+                </View>
+              )}
+              {item.contadores.em_analise > 0 && (
+                <View style={[tw.bgBlue100, tw.pX2, tw.pY1, tw.roundedFull, tw.mR2, tw.mB1]}>
+                  <Text style={[tw.textXs, { color: '#3b82f6' }]}>
+                    🔍 {item.contadores.em_analise} em análise
+                  </Text>
+                </View>
+              )}
+              {item.contadores.aprovadas > 0 && (
+                <View style={[tw.bgGreen100, tw.pX2, tw.pY1, tw.roundedFull, tw.mR2, tw.mB1]}>
+                  <Text style={[tw.textXs, { color: '#10b981' }]}>
+                    ✓ {item.contadores.aprovadas} aprovada{item.contadores.aprovadas > 1 ? 's' : ''}
+                  </Text>
+                </View>
+              )}
+              {item.contadores.recusadas > 0 && (
+                <View style={[tw.bgRed100, tw.pX2, tw.pY1, tw.roundedFull, tw.mR2, tw.mB1]}>
+                  <Text style={[tw.textXs, { color: '#ef4444' }]}>
+                    ✗ {item.contadores.recusadas} recusada{item.contadores.recusadas > 1 ? 's' : ''}
+                  </Text>
+                </View>
+              )}
+            </Row>
           </View>
         )}
         
@@ -206,58 +219,12 @@ const SolicitacoesPerucaInstituicaoTela: React.FC = () => {
     );
   };
 
-  const filtros = [
-    { id: null, nome: 'Todas' },
-    { id: 1, nome: 'Pendente' },
-    { id: 2, nome: 'Análise' },
-    { id: 3, nome: 'Aprovada' },
-    { id: 4, nome: 'Rejeitada' },
-    { id: 5, nome: 'Concluída' },
-    { id: 6, nome: 'Cancelada' },
-  ];
-
-  const renderFiltros = () => (
-    <ScrollView 
-      horizontal 
-      showsHorizontalScrollIndicator={false} 
-      contentContainerStyle={[tw.pX2, tw.itemsCenter, { height: 34 }]}
-    >
-      {filtros.map((filtro) => (
-        <TouchableOpacity
-          key={filtro.id !== null ? filtro.id.toString() : 'todas'}
-          style={[
-            tw.mR1,
-            { paddingVertical: 4, paddingHorizontal: 8 },
-            tw.rounded,
-            statusFiltro === filtro.id
-              ? { backgroundColor: '#4EB296' }
-              : tw.bgGray200,
-          ]}
-          onPress={() => setStatusFiltro(filtro.id)}
-        >
-          <Text
-            style={[
-              statusFiltro === filtro.id ? tw.textWhite : tw.textGray800,
-              tw.textXs,
-              tw.fontMedium,
-            ]}
-          >
-            {filtro.nome}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
-  );
 
   const ListaVazia = () => {
     let mensagem = 'Não há solicitações para sua instituição';
     
     if (termoBusca) {
       mensagem = `Nenhuma solicitação encontrada com o nome "${termoBusca}"`;
-    } else if (statusFiltro) {
-      mensagem = `Não há solicitações com o status ${
-        filtros.find((f) => f.id === statusFiltro)?.nome
-      }`;
     }
     
     return (
@@ -293,10 +260,6 @@ const SolicitacoesPerucaInstituicaoTela: React.FC = () => {
               </TouchableOpacity>
             )}
           </View>
-        </View>
-        
-        <View style={[{ height: 34 }]}>
-          {renderFiltros()}
         </View>
       </View>
 

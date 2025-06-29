@@ -157,6 +157,8 @@ const NotificacoesTela = () => {
         return 'chatbubble';
       case 'solicitacao':
         return 'document-text';
+      case 'analise_status':
+        return 'analytics';
       case 'recebimento_cabelo':
         return 'gift';
       default:

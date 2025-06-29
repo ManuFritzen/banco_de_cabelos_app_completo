@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import * as FileSystem from 'expo-file-system';
 import { solicitacoesServico } from '../../servicos/api/solicitacoes';
+import { solicitacoesInstituicaoServico } from '../../servicos/api/solicitacoes-instituicao';
 import cliente from '../../servicos/api/cliente';
 import { Buffer } from 'buffer';
 import { useAutenticacao } from '../../contextos/AutenticacaoContexto';
@@ -43,6 +44,23 @@ interface Solicitacao {
     email: string;
     telefone: string;
   };
+  contadores?: {
+    total_analises: number;
+    pendentes: number;
+    em_analise: number;
+    aprovadas: number;
+    recusadas: number;
+    tem_analises: boolean;
+  };
+  SolicitacoesInstituicao?: Array<{
+    id: number;
+    instituicao_id: number;
+    status_solicitacao_id: number;
+    Instituicao: {
+      id: number;
+      nome: string;
+    };
+  }>;
 }
 
 const DetalhesSolicitacaoTela: React.FC = () => {
@@ -59,6 +77,8 @@ const DetalhesSolicitacaoTela: React.FC = () => {
   const [urlLaudo, setUrlLaudo] = useState<string>('');
   const [telaCheia, setTelaCheia] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [analisando, setAnalisando] = useState(false);
+  const [jaAnalisou, setJaAnalisou] = useState(false);
   
   const abrirTelaCheia = () => {
     if (!urlLaudo) {
@@ -155,6 +175,64 @@ const DetalhesSolicitacaoTela: React.FC = () => {
   useEffect(() => {
     buscarSolicitacao();
   }, [id]);
+
+  useEffect(() => {
+    if (solicitacao && ehInstituicao() && usuario) {
+      // Verificar se a instituição já analisou esta solicitação
+      const analiseExistente = solicitacao.SolicitacoesInstituicao?.find(
+        analise => analise.instituicao_id === usuario.id
+      );
+      setJaAnalisou(!!analiseExistente);
+    }
+  }, [solicitacao, ehInstituicao, usuario]);
+
+  const analisarSolicitacao = async () => {
+    if (!solicitacao || !ehInstituicao()) return;
+
+    Alert.alert(
+      'Analisar Solicitação',
+      'Você deseja assumir a análise desta solicitação? Isso criará um registro para acompanhamento do status.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Analisar',
+          onPress: async () => {
+            try {
+              setAnalisando(true);
+              
+              await solicitacoesInstituicaoServico.analisarSolicitacao(solicitacao.id);
+              
+              Alert.alert(
+                'Sucesso', 
+                'Solicitação adicionada às suas análises! Você pode acompanhar o progresso na tela "Minhas Análises".',
+                [
+                  {
+                    text: 'Ver Análises',
+                    onPress: () => navigation.navigate('MinhasAnalises')
+                  },
+                  { text: 'OK' }
+                ]
+              );
+              
+              // Recarregar dados da solicitação
+              buscarSolicitacao();
+            } catch (erro: any) {
+              console.error('Erro ao analisar solicitação:', erro);
+              
+              let mensagem = 'Não foi possível analisar a solicitação.';
+              if (erro.response?.status === 400) {
+                mensagem = erro.response.data?.message || 'Esta solicitação já foi analisada por sua instituição.';
+              }
+              
+              Alert.alert('Erro', mensagem);
+            } finally {
+              setAnalisando(false);
+            }
+          }
+        }
+      ]
+    );
+  };
   
   const voltar = () => {
     navigation.goBack();
@@ -186,35 +264,6 @@ const DetalhesSolicitacaoTela: React.FC = () => {
     }
   };
   
-  const atualizarStatus = (novoStatusId: number) => {
-    if (!ehInstituicao()) return;
-    
-    const nomeStatus = getNomeStatus(novoStatusId);
-    
-    Alert.alert(
-      `Atualizar para ${nomeStatus}`,
-      `Confirma a alteração do status para "${nomeStatus}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Confirmar', onPress: () => confirmarAtualizacaoStatus(novoStatusId) }
-      ]
-    );
-  };
-  
-  const confirmarAtualizacaoStatus = async (novoStatusId: number) => {
-    try {
-      await solicitacoesServico.atualizarStatusSolicitacao(
-        id,
-        novoStatusId,
-        solicitacao?.observacao
-      );
-      Alert.alert('Sucesso', 'Status atualizado com sucesso.');
-      buscarSolicitacao(); // Recarregar dados
-    } catch (erro) {
-      console.error('Erro ao atualizar status:', erro);
-      Alert.alert('Erro', 'Não foi possível atualizar o status da solicitação.');
-    }
-  };
   
   // Retorna o estilo e cor do status
   const getEstiloStatus = (statusId: number) => {
@@ -303,7 +352,14 @@ const DetalhesSolicitacaoTela: React.FC = () => {
   }
   
   const estiloStatus = getEstiloStatus(solicitacao.status_solicitacao_id);
-  const podeExcluir = solicitacao.status_solicitacao_id <= 2; // Só pode excluir se estiver pendente ou em análise
+  
+  // Verificar se há análises aprovadas ou rejeitadas
+  const temAnaliseAprovadaOuRejeitada = solicitacao.SolicitacoesInstituicao?.some(
+    analise => analise.status_solicitacao_id === 3 || analise.status_solicitacao_id === 4
+  ) || false;
+  
+  // Só pode cancelar se estiver pendente ou em análise E não tiver análises aprovadas/rejeitadas
+  const podeExcluir = solicitacao.status_solicitacao_id <= 2 && !temAnaliseAprovadaOuRejeitada;
   
   // Modal para visualização em tela cheia
   const renderModalTelaCheia = () => (
@@ -332,14 +388,6 @@ const DetalhesSolicitacaoTela: React.FC = () => {
 
   return (
     <SafeContainer style={themeStyles.bgBackground}>
-      <Row style={[themeStyles.bgPrimary, tw.pX4, tw.pY3]}>
-        <TouchableOpacity onPress={voltar}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={[tw.textWhite, tw.textLg, tw.fontBold, tw.mL3]}>
-          Detalhes da Solicitação
-        </Text>
-      </Row>
       
       {renderModalTelaCheia()}
       
@@ -349,11 +397,7 @@ const DetalhesSolicitacaoTela: React.FC = () => {
       >
         <Card style={tw.mB4}>
           <Row style={tw.justifyBetween}>
-            <View style={[tw.pX3, tw.pY1, tw.roundedFull, estiloStatus.bg]}>
-              <Text style={[tw.textSm, tw.fontMedium, estiloStatus.text]}>
-                {solicitacao.StatusSolicitacao?.nome || getNomeStatus(solicitacao.status_solicitacao_id)}
-              </Text>
-            </View>
+            
             
             <Text style={tw.textGray500}>
               #{solicitacao.id}
@@ -384,6 +428,84 @@ const DetalhesSolicitacaoTela: React.FC = () => {
             </View>
           )}
         </Card>
+        
+        {ehInstituicao() && solicitacao.contadores && (
+          <Card style={tw.mB4}>
+            <Titulo style={tw.mB3}>Status das Análises</Titulo>
+            
+            {solicitacao.contadores.tem_analises ? (
+              <View>
+                <Row style={[tw.flexWrap, tw.mB3]}>
+                  {solicitacao.contadores.pendentes > 0 && (
+                    <View style={[tw.bgYellow100, tw.pX3, tw.pY2, tw.roundedFull, tw.mR2, tw.mB2]}>
+                      <Text style={[tw.textSm, { color: '#d97706' }]}>
+                        ⏳ {solicitacao.contadores.pendentes} pendente{solicitacao.contadores.pendentes > 1 ? 's' : ''}
+                      </Text>
+                    </View>
+                  )}
+                  {solicitacao.contadores.em_analise > 0 && (
+                    <View style={[tw.bgBlue100, tw.pX3, tw.pY2, tw.roundedFull, tw.mR2, tw.mB2]}>
+                      <Text style={[tw.textSm, { color: '#3b82f6' }]}>
+                        🔍 {solicitacao.contadores.em_analise} em análise
+                      </Text>
+                    </View>
+                  )}
+                  {solicitacao.contadores.aprovadas > 0 && (
+                    <View style={[tw.bgGreen100, tw.pX3, tw.pY2, tw.roundedFull, tw.mR2, tw.mB2]}>
+                      <Text style={[tw.textSm, { color: '#10b981' }]}>
+                        ✓ {solicitacao.contadores.aprovadas} aprovada{solicitacao.contadores.aprovadas > 1 ? 's' : ''}
+                      </Text>
+                    </View>
+                  )}
+                  {solicitacao.contadores.recusadas > 0 && (
+                    <View style={[tw.bgRed100, tw.pX3, tw.pY2, tw.roundedFull, tw.mR2, tw.mB2]}>
+                      <Text style={[tw.textSm, { color: '#ef4444' }]}>
+                        ✗ {solicitacao.contadores.recusadas} recusada{solicitacao.contadores.recusadas > 1 ? 's' : ''}
+                      </Text>
+                    </View>
+                  )}
+                </Row>
+                
+                <Text style={[tw.textXs, tw.textGray500]}>
+                  Total de {solicitacao.contadores.total_analises} instituição{solicitacao.contadores.total_analises > 1 ? 'ões' : ''} analisando esta solicitação
+                </Text>
+              </View>
+            ) : (
+              <Text style={[tw.textGray500, tw.textSm]}>
+                Nenhuma instituição analisou esta solicitação ainda. Seja a primeira!
+              </Text>
+            )}
+            
+            {/* Botão para analisar solicitação */}
+            {!jaAnalisou && (
+              <View style={tw.mT4}>
+                <Botao
+                  titulo={analisando ? "Analisando..." : "Analisar Solicitação"}
+                  onPress={analisarSolicitacao}
+                  carregando={analisando}
+                  larguraTotal
+                  style={[themeStyles.bgSecondary]}
+                />
+              </View>
+            )}
+            
+            {jaAnalisou && (
+              <View style={[tw.mT4, tw.pY3, tw.pX4, tw.bgBlue100, tw.roundedLg]}>
+                <Text style={[tw.textSm, { color: '#3b82f6' }, tw.textCenter]}>
+                  ✓ Sua instituição já está analisando esta solicitação
+                </Text>
+                <TouchableOpacity
+                  style={[tw.mT2, tw.itemsCenter]}
+                  onPress={() => navigation.navigate('MinhasAnalises')}
+                >
+                  <Text style={[tw.textSm, { color: '#3b82f6' }, tw.underline]}>
+                    Ver em Minhas Análises
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </Card>
+        )}
         
         <Card style={tw.mB4}>
           <Titulo style={tw.mB2}>Observações</Titulo>
@@ -516,56 +638,71 @@ const DetalhesSolicitacaoTela: React.FC = () => {
           )}
         </Card>
         
-        {ehInstituicao() && (
+        {solicitacao.SolicitacoesInstituicao && solicitacao.SolicitacoesInstituicao.length > 0 && (
           <Card style={tw.mB6}>
-            <Titulo style={tw.mB3}>Atualizar Status</Titulo>
+            <Titulo style={tw.mB3}>Histórico de Análises</Titulo>
+            <Text style={[tw.textSm, tw.textGray600, tw.mB3]}>
+              Acompanhe o status das análises de cada instituição de forma transparente
+            </Text>
             
-            <Row style={[tw.flexWrap, tw.mT2, tw.mB4]}>
-              <TouchableOpacity
-                style={[tw.mR2, tw.mB2, tw.pX3, tw.pY1, tw.roundedFull, solicitacao.status_solicitacao_id === 1 ? tw.bgYellow500 : tw.bgYellow100]}
-                onPress={() => atualizarStatus(1)}
-              >
-                <Text style={[tw.textSm, solicitacao.status_solicitacao_id === 1 ? tw.textWhite : tw.textYellow800]}>
-                  Pendente
-                </Text>
-              </TouchableOpacity>
+            {solicitacao.SolicitacoesInstituicao.map((analise, index) => {
+              const getEstiloStatusAnalise = (statusId: number) => {
+                switch (statusId) {
+                  case 1: // Pendente
+                    return { bg: tw.bgYellow100, text: { color: '#d97706' } };
+                  case 2: // Em análise
+                    return { bg: tw.bgBlue100, text: { color: '#3b82f6' } };
+                  case 3: // Aprovada
+                    return { bg: tw.bgGreen100, text: { color: '#10b981' } };
+                  case 4: // Recusada
+                    return { bg: tw.bgRed100, text: { color: '#ef4444' } };
+                  case 5: // Concluída
+                    return { bg: tw.bgPurple100, text: { color: '#8b5cf6' } };
+                  default:
+                    return { bg: tw.bgGray100, text: tw.textGray600 };
+                }
+              };
+
+              const getNomeStatusAnalise = (statusId: number): string => {
+                switch (statusId) {
+                  case 1:
+                    return 'Pendente';
+                  case 2:
+                    return 'Em análise';
+                  case 3:
+                    return 'Aprovada';
+                  case 4:
+                    return 'Recusada';
+                  case 5:
+                    return 'Concluída';
+                  default:
+                    return `Status ${statusId}`;
+                }
+              };
+
+              const estiloStatus = getEstiloStatusAnalise(analise.status_solicitacao_id);
               
-              <TouchableOpacity
-                style={[tw.mR2, tw.mB2, tw.pX3, tw.pY1, tw.roundedFull, solicitacao.status_solicitacao_id === 2 ? tw.bgBlue500 : tw.bgBlue100]}
-                onPress={() => atualizarStatus(2)}
-              >
-                <Text style={[tw.textSm, solicitacao.status_solicitacao_id === 2 ? tw.textWhite : tw.textBlue800]}>
-                  Em análise
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[tw.mR2, tw.mB2, tw.pX3, tw.pY1, tw.roundedFull, solicitacao.status_solicitacao_id === 3 ? tw.bgGreen500 : tw.bgGreen100]}
-                onPress={() => atualizarStatus(3)}
-              >
-                <Text style={[tw.textSm, solicitacao.status_solicitacao_id === 3 ? tw.textWhite : tw.textGreen800]}>
-                  Aprovada
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[tw.mR2, tw.mB2, tw.pX3, tw.pY1, tw.roundedFull, solicitacao.status_solicitacao_id === 4 ? tw.bgRed500 : tw.bgRed100]}
-                onPress={() => atualizarStatus(4)}
-              >
-                <Text style={[tw.textSm, solicitacao.status_solicitacao_id === 4 ? tw.textWhite : tw.textRed800]}>
-                  Recusada
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[tw.mR2, tw.mB2, tw.pX3, tw.pY1, tw.roundedFull, solicitacao.status_solicitacao_id === 5 ? tw.bgPurple500 : tw.bgPurple100]}
-                onPress={() => atualizarStatus(5)}
-              >
-                <Text style={[tw.textSm, solicitacao.status_solicitacao_id === 5 ? tw.textWhite : tw.textPurple800]}>
-                  Concluída
-                </Text>
-              </TouchableOpacity>
-            </Row>
+              return (
+                <View key={analise.id} style={[tw.bgGray500, tw.p3, tw.roundedLg, tw.mB2]}>
+                  <Row style={[tw.justifyBetween, tw.itemsCenter]}>
+                    <View style={tw.flex1}>
+                      <Text style={[tw.fontMedium, themeStyles.textText]}>
+                        {analise.Instituicao.nome}
+                      </Text>
+                      <Text style={[tw.textSm, tw.textGray600]}>
+                        Instituição #{analise.Instituicao.id}
+                      </Text>
+                    </View>
+                    
+                    <View style={[tw.pX3, tw.pY1, tw.roundedFull, estiloStatus.bg]}>
+                      <Text style={[tw.textSm, tw.fontMedium, estiloStatus.text]}>
+                        {getNomeStatusAnalise(analise.status_solicitacao_id)}
+                      </Text>
+                    </View>
+                  </Row>
+                </View>
+              );
+            })}
           </Card>
         )}
         

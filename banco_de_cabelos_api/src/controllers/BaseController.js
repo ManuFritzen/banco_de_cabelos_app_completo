@@ -15,6 +15,19 @@ class BaseController {
     return res.status(statusCode).json(response);
   }
 
+  sendError(res, error, statusCode = 500) {
+    const response = {
+      success: false,
+      message: error.message || 'Erro interno do servidor'
+    };
+    
+    if (process.env.NODE_ENV === 'development') {
+      response.stack = error.stack;
+    }
+    
+    return res.status(statusCode).json(response);
+  }
+
   sendPaginatedResponse(res, result, page, limit) {
     return this.sendSuccess(res, {
       count: result.count,
@@ -108,6 +121,43 @@ class BaseController {
     }
     
     return userData;
+  }
+
+  async executeWithTransaction(callback, options = {}) {
+    const { sequelize } = require('../models');
+    const transaction = await sequelize.transaction();
+    try {
+      const result = await callback(transaction);
+      await transaction.commit();
+      return result;
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  }
+
+  async findByIdOrThrow(Model, id, options = {}) {
+    const validatedId = this.validateNumericId(id, options.fieldName || 'ID');
+    const entity = await Model.findByPk(validatedId, options.include ? { include: options.include } : {});
+    
+    if (!entity) {
+      throw new ApiError(options.notFoundMessage || 'Registro não encontrado', 404);
+    }
+    
+    return entity;
+  }
+
+  buildIncludeOptions(includes = []) {
+    return includes.length > 0 ? { include: includes } : {};
+  }
+
+  handleControllerError(error, res) {
+    if (error instanceof ApiError) {
+      return this.sendError(res, error, error.statusCode);
+    }
+    
+    const handledError = handleSequelizeError(error);
+    return this.sendError(res, handledError, handledError.statusCode || 500);
   }
 }
 

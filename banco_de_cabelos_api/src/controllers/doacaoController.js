@@ -3,6 +3,8 @@ const { Doacao, Peruca, Solicitacao, Usuario, TipoPeruca, Cor, StatusSolicitacao
 const { ApiError, asyncHandler } = require('../utils/errorHandler');
 const { Op } = require('sequelize');
 const { Validators } = require('../utils/validators');
+const DoacaoService = require('../services/DoacaoService');
+const DoacaoView = require('../views/DoacaoView');
 
 class DoacaoController extends BaseController {
   static HORAS_LIMITE_EXCLUSAO = 24;
@@ -78,39 +80,27 @@ class DoacaoController extends BaseController {
   }
 
   listarDoacoes = asyncHandler(async (req, res) => {
-    const { page, limit, offset } = this.getPaginationParams(req);
-    const where = req.usuario.tipo === 'A' ? {} : await this.construirFiltrosListagem(req);
-    
-    const doacoes = await Doacao.findAndCountAll({
-      where,
-      include: this.getDefaultIncludes(),
-      limit,
-      offset,
-      order: [['data_hora', 'DESC']]
-    });
-    
-    return this.sendPaginatedResponse(res, doacoes, page, limit);
+    try {
+      const { page, limit, offset } = this.getPaginationParams(req);
+      const paginacao = { limit, offset };
+      
+      const doacoes = await DoacaoService.listarDoacoes(req.usuario, paginacao);
+      const view = DoacaoView.paginated(doacoes, page, limit);
+      return res.status(200).json(view);
+    } catch (error) {
+      return this.handleControllerError(error, res);
+    }
   });
 
   obterDoacaoPorId = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    
-    const idValidado = this.validateNumericId(id, 'ID da doação');
-    
-    const doacao = await Doacao.findByPk(idValidado, {
-      include: this.getDefaultIncludes()
-    });
-    
-    if (!doacao) {
-      throw new ApiError('Doação não encontrada', 404);
+    try {
+      const { id } = req.params;
+      const doacao = await DoacaoService.obterDoacaoCompleta(id, req.usuario);
+      const view = DoacaoView.single(doacao);
+      return res.status(200).json(view);
+    } catch (error) {
+      return this.handleControllerError(error, res);
     }
-    
-    const temPermissao = await this.verificarPermissaoDoacao(req, doacao);
-    if (!temPermissao) {
-      throw new ApiError('Você não tem permissão para visualizar esta doação', 403);
-    }
-    
-    return this.sendSuccess(res, { data: doacao });
   });
 
   obterDoacoesPorInstituicao = asyncHandler(async (req, res) => {
@@ -185,44 +175,19 @@ class DoacaoController extends BaseController {
   });
 
   criarDoacao = asyncHandler(async (req, res) => {
-    const { peruca_id, solicitacao_id, observacao } = req.body;
-    const instituicao_id = req.usuario.id;
-    
-    const perucaIdValidado = this.validateNumericId(peruca_id, 'ID da peruca');
-    const solicitacaoIdValidado = this.validateNumericId(solicitacao_id, 'ID da solicitação');
-    
-    let observacaoSanitizada = null;
-    if (observacao && !Validators.isEmpty(observacao.trim())) {
-      observacaoSanitizada = this.sanitizeInput(observacao, { removeExtraSpaces: true });
-      if (observacaoSanitizada.length > 500) {
-        throw new ApiError('Observação não pode ter mais de 500 caracteres', 400);
-      }
+    try {
+      const dadosDoacao = {
+        peruca_id: this.validateNumericId(req.body.peruca_id, 'ID da peruca'),
+        solicitacao_id: this.validateNumericId(req.body.solicitacao_id, 'ID da solicitação'),
+        observacao: req.body.observacao
+      };
+      
+      const doacao = await DoacaoService.criarDoacao(dadosDoacao, req.usuario.id);
+      const view = DoacaoView.created(doacao);
+      return res.status(201).json(view);
+    } catch (error) {
+      return this.handleControllerError(error, res);
     }
-    
-    await this.validarCriacaoDoacao(perucaIdValidado, solicitacaoIdValidado, instituicao_id);
-    
-    const doacao = await sequelize.transaction(async (t) => {
-      const novaDoacao = await Doacao.create({
-        peruca_id: perucaIdValidado,
-        solicitacao_id: solicitacaoIdValidado,
-        instituicao_id,
-        data_hora: new Date(),
-        observacao: observacaoSanitizada
-      }, { transaction: t });
-      
-      await Peruca.update(
-        { disponivel: false }, 
-        { where: { id: perucaIdValidado }, transaction: t }
-      );
-      
-      return novaDoacao;
-    });
-    
-    const doacaoCompleta = await Doacao.findByPk(doacao.id, {
-      include: this.getDefaultIncludes()
-    });
-    
-    return this.sendSuccess(res, { data: doacaoCompleta }, 'Doação registrada com sucesso', 201);
   });
 
   async validarCriacaoDoacao(peruca_id, solicitacao_id, instituicao_id) {
@@ -258,70 +223,27 @@ class DoacaoController extends BaseController {
   }
 
   atualizarDoacao = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    const { observacao } = req.body;
-    
-    const idValidado = this.validateNumericId(id, 'ID da doação');
-    
-    let observacaoSanitizada = null;
-    if (observacao && !Validators.isEmpty(observacao.trim())) {
-      observacaoSanitizada = this.sanitizeInput(observacao, { removeExtraSpaces: true });
-      if (observacaoSanitizada.length > 500) {
-        throw new ApiError('Observação não pode ter mais de 500 caracteres', 400);
-      }
+    try {
+      const { id } = req.params;
+      const dadosAtualizacao = { observacao: req.body.observacao };
+      
+      const doacao = await DoacaoService.atualizarDoacao(id, dadosAtualizacao, req.usuario.id);
+      const view = DoacaoView.updated(doacao);
+      return res.status(200).json(view);
+    } catch (error) {
+      return this.handleControllerError(error, res);
     }
-    
-    const doacao = await Doacao.findByPk(idValidado);
-    if (!doacao) {
-      throw new ApiError('Doação não encontrada', 404);
-    }
-    
-    if (doacao.instituicao_id !== req.usuario.id) {
-      throw new ApiError('Você não tem permissão para atualizar esta doação', 403);
-    }
-    
-    await doacao.update({ observacao: observacaoSanitizada });
-    
-    const doacaoAtualizada = await Doacao.findByPk(idValidado, {
-      include: this.getDefaultIncludes()
-    });
-    
-    return this.sendSuccess(res, { data: doacaoAtualizada }, 'Doação atualizada com sucesso');
   });
 
   excluirDoacao = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    
-    const idValidado = this.validateNumericId(id, 'ID da doação');
-    
-    const doacao = await Doacao.findByPk(idValidado);
-    if (!doacao) {
-      throw new ApiError('Doação não encontrada', 404);
+    try {
+      const { id } = req.params;
+      await DoacaoService.excluirDoacao(id, req.usuario.id);
+      const view = DoacaoView.deleted();
+      return res.status(200).json(view);
+    } catch (error) {
+      return this.handleControllerError(error, res);
     }
-    
-    if (doacao.instituicao_id !== req.usuario.id) {
-      throw new ApiError('Você não tem permissão para excluir esta doação', 403);
-    }
-    
-    const horasDesdeDoacao = Math.abs(new Date() - new Date(doacao.data_hora)) / 36e5;
-    if (horasDesdeDoacao > DoacaoController.HORAS_LIMITE_EXCLUSAO) {
-      throw new ApiError(
-        `Só é possível excluir doações realizadas nas últimas ${DoacaoController.HORAS_LIMITE_EXCLUSAO} horas`, 
-        400
-      );
-    }
-
-    await sequelize.transaction(async (t) => {
-      const peruca = await Peruca.findByPk(doacao.peruca_id, { transaction: t });
-      
-      if (peruca) {
-        await peruca.update({ disponivel: true }, { transaction: t });
-      }
-      
-      await doacao.destroy({ transaction: t });
-    });
-    
-    return this.sendSuccess(res, { data: {} }, 'Doação excluída com sucesso e peruca disponível novamente');
   });
 }
 

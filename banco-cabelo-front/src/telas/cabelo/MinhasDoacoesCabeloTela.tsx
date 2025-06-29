@@ -197,36 +197,63 @@ const MinhasDoacoesCabeloTela: React.FC = () => {
           console.log(`Buscando detalhes da instituição ID ${id}...`);
           const resposta = await instituicoesServico.obterInstituicao(id);
           
+          console.log(`Resposta completa da API para instituição ${id}:`, resposta.data);
+          
+          // A API pode retornar em formatos diferentes
+          let instituicao = null;
           if (resposta.data && resposta.data.data) {
-            const instituicao = resposta.data.data;
+            // Formato: { data: { data: usuario } }
+            instituicao = resposta.data.data;
+          } else if (resposta.data && resposta.data.success) {
+            // Formato: { success: true, ...usuario } (UsuarioView.profile)
+            const { success, ...dadosUsuario } = resposta.data;
+            instituicao = dadosUsuario;
+          } else if (resposta.data) {
+            // Formato direto
+            instituicao = resposta.data;
+          }
+          
+          if (instituicao) {
             console.log(`Instituição ${id} encontrada:`, instituicao.nome_fantasia || instituicao.nome);
+            console.log('Dados completos da instituição da API:', instituicao);
+            console.log('Telefone encontrado:', instituicao.telefone);
             
             // Atualiza todas as doações com esta instituição
             setDoacoes(docsAtuais => docsAtuais.map(doacao => {
               const doacaoId = doacao.Instituicao?.id || doacao.instituicao?.id;
               
               if (doacaoId === id) {
+                const novaInstituicao = {
+                  id: instituicao.id,
+                  nome_fantasia: instituicao.nome_fantasia,
+                  razao_social: instituicao.razao_social,
+                  nome: instituicao.nome,
+                  email: instituicao.email,
+                  telefone: instituicao.telefone || instituicao.celular || instituicao.telefone_comercial || instituicao.telefone_contato
+                };
+                
+                console.log(`Atualizando doação ${doacao.id} com nova instituição:`, novaInstituicao);
+                
                 return {
                   ...doacao,
-                  Instituicao: {
-                    id: instituicao.id,
-                    nome_fantasia: instituicao.nome_fantasia,
-                    razao_social: instituicao.razao_social,
-                    nome: instituicao.nome,
-                    email: instituicao.email,
-                    telefone: instituicao.telefone || instituicao.celular
-                  }
+                  Instituicao: novaInstituicao
                 };
               }
               
               return doacao;
             }));
+          } else {
+            console.log(`Resposta da API para instituição ${id} não tem estrutura esperada:`, resposta.data);
           }
-        } catch (erro) {
+        } catch (erro: any) {
           console.error(`Erro ao buscar detalhes da instituição ${id}:`, erro);
+          if (erro.response) {
+            console.error('Status do erro:', erro.response.status);
+            console.error('Dados do erro:', erro.response.data);
+          }
         }
       }
-    } catch (erro) {
+    } catch (erro: any) {
       console.error('Erro ao buscar detalhes das instituições:', erro);
     } finally {
       setBuscandoInstituicoes(false);
@@ -253,18 +280,33 @@ const MinhasDoacoesCabeloTela: React.FC = () => {
   };
 
   const formatarTelefone = (telefone?: string): string => {
-    if (!telefone) return 'Não informado';
+    console.log('Formatando telefone:', telefone, 'tipo:', typeof telefone);
     
-    const numeroLimpo = telefone.replace(/\D/g, '');
-    
-    if (numeroLimpo.length < 10 || numeroLimpo.length > 11) {
-      return telefone;
+    if (!telefone || telefone === null || telefone === undefined) {
+      return 'Não informado';
     }
     
-    if (numeroLimpo.length === 10) {
-      return `(${numeroLimpo.substring(0, 2)}) ${numeroLimpo.substring(2, 6)}-${numeroLimpo.substring(6)}`;
+    // Converte para string se não for
+    const telefoneStr = String(telefone).trim();
+    
+    if (telefoneStr === '' || telefoneStr === 'null' || telefoneStr === 'undefined') {
+      return 'Não informado';
+    }
+    
+    const numeroLimpo = telefoneStr.replace(/\D/g, '');
+    
+    // Se não tem números suficientes, retorna o valor original
+    if (numeroLimpo.length < 10) {
+      return telefoneStr.length > 0 ? telefoneStr : 'Não informado';
+    }
+    
+    // Se tem mais de 11 dígitos, pega só os primeiros 11
+    const numeroFinal = numeroLimpo.substring(0, 11);
+    
+    if (numeroFinal.length === 10) {
+      return `(${numeroFinal.substring(0, 2)}) ${numeroFinal.substring(2, 6)}-${numeroFinal.substring(6)}`;
     } else {
-      return `(${numeroLimpo.substring(0, 2)}) ${numeroLimpo.substring(2, 7)}-${numeroLimpo.substring(7)}`;
+      return `(${numeroFinal.substring(0, 2)}) ${numeroFinal.substring(2, 7)}-${numeroFinal.substring(7)}`;
     }
   };
 
@@ -510,7 +552,12 @@ const MinhasDoacoesCabeloTela: React.FC = () => {
                 <Row style={tw.mB1}>
                   <Text style={[tw.textGray600, tw.mR2]}>Telefone:</Text>
                   <Text style={themeStyles.textText}>
-                    {formatarTelefone(doacaoSelecionada.Instituicao?.telefone || doacaoSelecionada.instituicao?.telefone)}
+                    {(() => {
+                      const telefone = doacaoSelecionada.Instituicao?.telefone || doacaoSelecionada.instituicao?.telefone;
+                      console.log('Telefone da instituição no modal:', telefone);
+                      console.log('Dados completos da instituição no modal:', doacaoSelecionada.Instituicao || doacaoSelecionada.instituicao);
+                      return formatarTelefone(telefone);
+                    })()}
                   </Text>
                 </Row>
 
@@ -518,7 +565,14 @@ const MinhasDoacoesCabeloTela: React.FC = () => {
                   style={[tw.flexRow, tw.itemsCenter, tw.justifyCenter, themeStyles.bgSecondary, tw.roundedLg, tw.pY2, tw.pX4, tw.mT4]}
                   onPress={() => {
                     fecharModal();
-                    navigation.navigate('BuscarInstituicoes');
+                    // Navega para a tela de doar cabelo com a instituição atual, se disponível
+                    const instituicaoId = doacaoSelecionada?.Instituicao?.id || doacaoSelecionada?.instituicao?.id;
+                    if (instituicaoId) {
+                      navigation.navigate('DoacaoCabelo', { instituicaoId });
+                    } else {
+                      // Se não há instituição específica, vai para buscar instituições
+                      navigation.navigate('BuscarInstituicoes');
+                    }
                   }}
                 >
                   <Ionicons name="heart" size={18} color="#FFFFFF" style={tw.mR2} />
@@ -536,14 +590,6 @@ const MinhasDoacoesCabeloTela: React.FC = () => {
 
   return (
     <SafeContainer style={themeStyles.bgBackground}>
-      <Row style={[themeStyles.bgPrimary, tw.pX4, tw.pY3]}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={[tw.textWhite, tw.textLg, tw.fontBold, tw.mL3]}>
-          Minhas Doações de Cabelo
-        </Text>
-      </Row>
 
       <Container style={tw.p5}>
         {carregando && !carregandoMais ? (

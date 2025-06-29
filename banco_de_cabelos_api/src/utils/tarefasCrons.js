@@ -26,8 +26,6 @@ class CronManager extends BaseUtil {
     const taskName = CronManager.TASK_NAMES.CLEANUP_TOKENS;
     
     try {
-      console.log(`Iniciando tarefa: ${taskName}`);
-      
       const deletedCount = await BlacklistedToken.destroy({
         where: {
           expiresAt: {
@@ -36,7 +34,6 @@ class CronManager extends BaseUtil {
         }
       });
       
-      console.log(`Tarefa ${taskName} concluída. Tokens removidos: ${deletedCount}`);
       return deletedCount;
     } catch (error) {
       CronManager.logError(taskName, error);
@@ -53,7 +50,6 @@ class CronManager extends BaseUtil {
    */
   static registerTask(schedule, task, taskName, options = {}) {
     if (CronManager.activeTasks.has(taskName)) {
-      console.warn(`Tarefa '${taskName}' já está registrada`);
       return;
     }
 
@@ -81,7 +77,6 @@ class CronManager extends BaseUtil {
       createdAt: new Date()
     });
 
-    console.log(`Tarefa cron '${taskName}' registrada com schedule: ${schedule}`);
     return cronTask;
   }
 
@@ -95,11 +90,9 @@ class CronManager extends BaseUtil {
     if (taskInfo) {
       taskInfo.task.stop();
       CronManager.activeTasks.delete(taskName);
-      console.log(`Tarefa cron '${taskName}' removida`);
       return true;
     }
     
-    console.warn(`Tarefa '${taskName}' não encontrada`);
     return false;
   }
 
@@ -136,8 +129,6 @@ class CronManager extends BaseUtil {
         }
       }
     );
-    
-    console.log('Tarefas cron padrão inicializadas');
   }
 
   /**
@@ -146,11 +137,9 @@ class CronManager extends BaseUtil {
   static stopAllTasks() {
     CronManager.activeTasks.forEach((taskInfo, taskName) => {
       taskInfo.task.stop();
-      console.log(`Tarefa '${taskName}' parada`);
     });
     
     CronManager.activeTasks.clear();
-    console.log('Todas as tarefas cron foram paradas');
   }
 }
 

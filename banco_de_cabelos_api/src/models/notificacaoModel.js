@@ -1,11 +1,89 @@
-const { DataTypes } = require('sequelize');
+const { DataTypes, Model } = require('sequelize');
 const { sequelize } = require('../../config/database');
 const Usuario = require('./usuarioModel');
 const Publicacao = require('./publicacaoModel');
 const Comentario = require('./comentarioModel');
 const Solicitacao = require('./solicitacaoModel');
 
-const Notificacao = sequelize.define('Notificacao', {
+class Notificacao extends Model {
+  static async buscarPorUsuario(usuarioId, options = {}) {
+    return await this.findAll({
+      where: { usuario_id: usuarioId },
+      order: [['data_hora', 'DESC']],
+      ...options
+    });
+  }
+
+  static async buscarNaoLidas(usuarioId) {
+    return await this.findAll({
+      where: { 
+        usuario_id: usuarioId,
+        lida: false 
+      },
+      order: [['data_hora', 'DESC']]
+    });
+  }
+
+  static async contarNaoLidas(usuarioId) {
+    return await this.count({
+      where: { 
+        usuario_id: usuarioId,
+        lida: false 
+      }
+    });
+  }
+
+  static async marcarTodasComoLidas(usuarioId) {
+    return await this.update(
+      { lida: true },
+      { where: { usuario_id: usuarioId, lida: false } }
+    );
+  }
+
+  async marcarComoLida() {
+    return await this.update({ lida: true });
+  }
+
+  async pertenceAUsuario(usuarioId) {
+    return this.usuario_id === parseInt(usuarioId);
+  }
+
+  isLida() {
+    return this.lida === true;
+  }
+
+  async getUsuario() {
+    if (!this.Usuario) {
+      return await Usuario.findByPk(this.usuario_id);
+    }
+    return this.Usuario;
+  }
+
+  async getUsuarioOrigem() {
+    if (!this.UsuarioOrigem && this.usuario_origem_id) {
+      return await Usuario.findByPk(this.usuario_origem_id);
+    }
+    return this.UsuarioOrigem;
+  }
+
+  getTempoDecorrido() {
+    const agora = new Date();
+    const dataNotificacao = new Date(this.data_hora);
+    const diffMs = agora - dataNotificacao;
+    const diffHoras = Math.floor(diffMs / (1000 * 60 * 60));
+    
+    if (diffHoras < 1) {
+      return 'Agora';
+    } else if (diffHoras < 24) {
+      return `${diffHoras}h atrás`;
+    } else {
+      const diffDias = Math.floor(diffHoras / 24);
+      return `${diffDias}d atrás`;
+    }
+  }
+}
+
+Notificacao.init({
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -72,6 +150,8 @@ const Notificacao = sequelize.define('Notificacao', {
     }
   }
 }, {
+  sequelize,
+  modelName: 'Notificacao',
   tableName: 'notificacao',
   timestamps: false,
   indexes: [

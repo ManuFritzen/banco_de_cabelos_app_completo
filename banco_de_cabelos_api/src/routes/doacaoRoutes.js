@@ -29,9 +29,9 @@ const validacoesDoacao = [
 ];
 
 router.get('/', verificarTipo(['A', 'J']), listarDoacoes);
-router.get('/:id', obterDoacaoPorId); 
 router.get('/instituicao/:instituicao_id', obterDoacoesPorInstituicao); 
 router.get('/solicitacao/:solicitacao_id', obterDoacoesPorSolicitacao); 
+router.get('/:id', obterDoacaoPorId); 
 
 router.post('/', verificarTipo(['J']), validacoesDoacao, criarDoacao);
 router.put('/:id', verificarTipo(['J']), atualizarDoacao);

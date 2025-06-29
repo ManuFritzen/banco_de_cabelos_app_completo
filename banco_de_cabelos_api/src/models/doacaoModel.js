@@ -1,10 +1,57 @@
-const { DataTypes } = require('sequelize');
+const { DataTypes, Model } = require('sequelize');
 const { sequelize } = require('../../config/database');
 const Peruca = require('./perucaModel');
 const Solicitacao = require('./solicitacaoModel');
 const Usuario = require('./usuarioModel');
 
-const Doacao = sequelize.define('doacao', {
+class Doacao extends Model {
+  static async buscarPorInstituicao(instituicaoId, options = {}) {
+    return await this.findAll({
+      where: { instituicao_id: instituicaoId },
+      ...options
+    });
+  }
+
+  static async buscarPorSolicitacao(solicitacaoId, options = {}) {
+    return await this.findAll({
+      where: { solicitacao_id: solicitacaoId },
+      ...options
+    });
+  }
+
+  static async buscarPorPeruca(perucaId) {
+    return await this.findOne({
+      where: { peruca_id: perucaId }
+    });
+  }
+
+  static async contarPorInstituicao(instituicaoId) {
+    return await this.count({
+      where: { instituicao_id: instituicaoId }
+    });
+  }
+
+  getTempoDesdeDoacao() {
+    return Math.abs(new Date() - new Date(this.data_hora)) / 36e5; // horas
+  }
+
+  podeSerExcluida(limitHoras = 24) {
+    return this.getTempoDesdeDoacao() <= limitHoras;
+  }
+
+  async pertenceAInstituicao(instituicaoId) {
+    return this.instituicao_id === parseInt(instituicaoId);
+  }
+
+  async getInstituicao() {
+    if (!this.Instituicao) {
+      return await Usuario.findByPk(this.instituicao_id);
+    }
+    return this.Instituicao;
+  }
+}
+
+Doacao.init({
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -53,6 +100,8 @@ const Doacao = sequelize.define('doacao', {
     allowNull: true
   }
 }, {
+  sequelize,
+  modelName: 'doacao',
   hooks: {
     beforeCreate: async (doacao) => {
       if (doacao.instituicao_id) {

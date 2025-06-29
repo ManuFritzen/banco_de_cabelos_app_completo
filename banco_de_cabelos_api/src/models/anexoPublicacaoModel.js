@@ -1,8 +1,41 @@
-const { DataTypes } = require('sequelize');
+const { DataTypes, Model } = require('sequelize');
 const { sequelize } = require('../../config/database');
 const Publicacao = require('./publicacaoModel');
 
-const AnexoPublicacao = sequelize.define('anexo_publicacao', {
+class AnexoPublicacao extends Model {
+  static async buscarPorPublicacao(publicacaoId) {
+    return await this.findAll({
+      where: { publicacao_id: publicacaoId }
+    });
+  }
+
+  static async contarPorPublicacao(publicacaoId) {
+    return await this.count({
+      where: { publicacao_id: publicacaoId }
+    });
+  }
+
+  async pertenceAPublicacao(publicacaoId) {
+    return this.publicacao_id === parseInt(publicacaoId);
+  }
+
+  async getPublicacao() {
+    if (!this.Publicacao) {
+      return await Publicacao.findByPk(this.publicacao_id);
+    }
+    return this.Publicacao;
+  }
+
+  temFoto() {
+    return this.foto && this.foto.length > 0;
+  }
+
+  getTamanhoFoto() {
+    return this.foto ? this.foto.length : 0;
+  }
+}
+
+AnexoPublicacao.init({
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -27,6 +60,8 @@ const AnexoPublicacao = sequelize.define('anexo_publicacao', {
     }
   }
 }, {
+  sequelize,
+  modelName: 'anexo_publicacao',
   timestamps: false,
   tableName: 'anexo_publicacao'
 });

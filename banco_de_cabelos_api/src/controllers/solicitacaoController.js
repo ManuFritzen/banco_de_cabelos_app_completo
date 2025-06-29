@@ -86,7 +86,7 @@ class SolicitacaoController extends BaseController {
       });
       
       if (!solicitacao) {
-        console.log(`Solicitação com ID ${id} não encontrada no banco`);
+        throw new ApiError('Solicitação não encontrada', 404);
       }
       
       return solicitacao;
@@ -306,12 +306,27 @@ class SolicitacaoController extends BaseController {
       throw new ApiError('Solicitação não encontrada', 404);
     }
     
-    this.checkPermission(
-      req.usuario.tipo,
-      SolicitacaoController.TIPO_INSTITUICAO,
-      req.usuario.tipo,
-      [SolicitacaoController.TIPO_INSTITUICAO]
-    );
+    // Verificar permissões baseadas no tipo de usuário
+    if (req.usuario.tipo === 'F') {
+      // Pessoa física só pode cancelar (status 6) suas próprias solicitações
+      if (status_solicitacao_id !== 6) {
+        throw new ApiError('Pessoas físicas só podem cancelar solicitações (alterar para status cancelado)', 403);
+      }
+      
+      if (solicitacao.pessoa_fisica_id !== req.usuario.id) {
+        throw new ApiError('Você só pode cancelar suas próprias solicitações', 403);
+      }
+    } else if (req.usuario.tipo === 'J') {
+      // Instituições podem alterar qualquer status (manter comportamento atual)
+      this.checkPermission(
+        req.usuario.tipo,
+        SolicitacaoController.TIPO_INSTITUICAO,
+        req.usuario.tipo,
+        [SolicitacaoController.TIPO_INSTITUICAO]
+      );
+    } else {
+      throw new ApiError('Tipo de usuário não permitido para esta operação', 403);
+    }
     
     await this.validarStatusSolicitacao(validacao.sanitized.status_solicitacao_id || status_solicitacao_id);
     
@@ -324,28 +339,44 @@ class SolicitacaoController extends BaseController {
         observacao: validacao.sanitized.observacao !== undefined ? validacao.sanitized.observacao : solicitacao.observacao
       });
       
+      // Se a solicitação foi cancelada pelo solicitante (status 6), 
+      // atualizar também as análises de instituições que não foram aprovadas ou recusadas
+      if (novoStatus === 6) {
+        const { SolicitacaoInstituicao } = require('../models');
+        
+        await SolicitacaoInstituicao.update(
+          { 
+            status_solicitacao_id: 6,
+            observacoes: 'Cancelada pelo solicitante',
+            data_atualizacao: new Date()
+          },
+          {
+            where: {
+              solicitacao_id: idValidado,
+              status_solicitacao_id: {
+                [require('sequelize').Op.in]: [1, 2] // Apenas pendentes (1) e em análise (2)
+              }
+            }
+          }
+        );
+      }
+      
       const solicitacaoAtualizada = await this.buscarSolicitacaoCompleta(idValidado);
       
       if (statusAnterior !== novoStatus) {
-        console.log('Status mudou de', statusAnterior, 'para', novoStatus);
-        console.log('Solicitação atualizada:', solicitacaoAtualizada);
-        
         // Buscar o nome do status diretamente se não estiver na solicitação
         let statusNome = solicitacaoAtualizada.StatusSolicitacao?.nome;
         
         if (!statusNome) {
           const statusObj = await StatusSolicitacao.findByPk(novoStatus);
           statusNome = statusObj?.nome;
-          console.log('Status buscado diretamente:', statusNome);
         }
         
         if (statusNome) {
-          console.log('Criando notificação para status:', statusNome);
           await NotificacaoController.criarNotificacaoSolicitacao(
             solicitacaoAtualizada,
             statusNome
           );
-          console.log('Notificação criada com sucesso');
         } else {
           console.error('StatusSolicitacao não encontrado');
         }
@@ -532,10 +563,6 @@ class SolicitacaoController extends BaseController {
   }
 
   criarSolicitacaoBase64 = asyncHandler(async (req, res) => {
-    console.log('=== CRIAR SOLICITAÇÃO BASE64 ===');
-    console.log('Body recebido:', req.body);
-    console.log('Usuário:', req.usuario);
-    
     const { observacao, foto_laudo_medico, filename, status_solicitacao_id } = req.body;
     const pessoa_fisica_id = req.usuario.id;
     
@@ -554,10 +581,8 @@ class SolicitacaoController extends BaseController {
       }
       
       const imageBuffer = Buffer.from(matches[2], 'base64');
-      console.log('Tamanho da imagem:', imageBuffer.length);
       
       const validacao = Validators.validateSolicitacaoData({ observacao });
-      console.log('Validação:', validacao);
       
       const dadosSolicitacao = {
         pessoa_fisica_id,
@@ -566,16 +591,9 @@ class SolicitacaoController extends BaseController {
         foto_laudo_medico: imageBuffer
       };
       
-      console.log('Dados da solicitação (sem imagem):', {
-        ...dadosSolicitacao,
-        foto_laudo_medico: `Buffer de ${imageBuffer.length} bytes`
-      });
-      
       const solicitacao = await Solicitacao.create(dadosSolicitacao);
-      console.log('Solicitação criada:', solicitacao.id);
       
       const solicitacaoCompleta = await this.buscarSolicitacaoCompleta(solicitacao.id);
-      console.log('Solicitação completa buscada:', solicitacaoCompleta ? 'Sucesso' : 'Falhou');
       
       const solicitacaoJSON = JSON.parse(JSON.stringify(solicitacaoCompleta));
       

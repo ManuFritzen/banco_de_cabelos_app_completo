@@ -251,10 +251,22 @@ const DetalhesSolicitacaoTela: React.FC = () => {
   
   const confirmarCancelamento = async () => {
     try {
-      await solicitacoesServico.excluirSolicitacao(id);
-      Alert.alert('Sucesso', 'Solicitação cancelada com sucesso.', [
-        { text: 'OK', onPress: () => navigation.navigate('MinhasSolicitacoes') }
-      ]);
+      // Verificar se há análises em andamento (qualquer análise por instituição)
+      const temAnalises = solicitacao?.SolicitacoesInstituicao && solicitacao.SolicitacoesInstituicao.length > 0;
+      
+      if (temAnalises) {
+        // Se há análises, alterar status para "Cancelada pelo solicitante" (ID 6)
+        await solicitacoesServico.atualizarStatusSolicitacao(id, 6, 'Solicitação cancelada pelo solicitante');
+        Alert.alert('Sucesso', 'Solicitação cancelada com sucesso. As instituições foram notificadas.', [
+          { text: 'OK', onPress: () => navigation.navigate('MinhasSolicitacoes') }
+        ]);
+      } else {
+        // Se não há análises, deletar completamente como era antes
+        await solicitacoesServico.excluirSolicitacao(id);
+        Alert.alert('Sucesso', 'Solicitação cancelada com sucesso.', [
+          { text: 'OK', onPress: () => navigation.navigate('MinhasSolicitacoes') }
+        ]);
+      }
     } catch (erro: any) {
       console.error('Erro ao cancelar solicitação:', erro);
       
@@ -278,6 +290,8 @@ const DetalhesSolicitacaoTela: React.FC = () => {
         return { bg: tw.bgRed100, text: tw.textRed800 };
       case 5: // Concluída
         return { bg: tw.bgPurple100, text: tw.textPurple800 };
+      case 6: // Cancelada pelo solicitante
+        return { bg: tw.bgGray100, text: tw.textGray800 };
       default:
         return { bg: tw.bgGray100, text: tw.textGray800 };
     }
@@ -291,6 +305,7 @@ const DetalhesSolicitacaoTela: React.FC = () => {
       case 3: return "Aprovada";
       case 4: return "Recusada";
       case 5: return "Concluída";
+      case 6: return "Cancelada pelo solicitante";
       default: return `Status ${statusId}`;
     }
   };
@@ -358,8 +373,13 @@ const DetalhesSolicitacaoTela: React.FC = () => {
     analise => analise.status_solicitacao_id === 3 || analise.status_solicitacao_id === 4
   ) || false;
   
-  // Só pode cancelar se estiver pendente ou em análise E não tiver análises aprovadas/rejeitadas
-  const podeExcluir = solicitacao.status_solicitacao_id <= 2 && !temAnaliseAprovadaOuRejeitada;
+  // Só pode cancelar se:
+  // 1. Estiver pendente (1) ou em análise (2) 
+  // 2. NÃO tiver análises aprovadas/rejeitadas
+  // 3. NÃO estiver já cancelada pelo solicitante (6)
+  const podeExcluir = solicitacao.status_solicitacao_id <= 2 && 
+                     !temAnaliseAprovadaOuRejeitada && 
+                     solicitacao.status_solicitacao_id !== 6;
   
   // Modal para visualização em tela cheia
   const renderModalTelaCheia = () => (

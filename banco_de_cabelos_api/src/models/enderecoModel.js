@@ -1,8 +1,73 @@
-const { DataTypes } = require('sequelize');
+const { DataTypes, Model } = require('sequelize');
 const { sequelize } = require('../../config/database');
 const Usuario = require('./usuarioModel');
 
-const Endereco = sequelize.define('endereco', {
+class Endereco extends Model {
+  static async buscarPorUsuario(usuarioId) {
+    return await this.findAll({
+      where: { usuario_id: usuarioId }
+    });
+  }
+
+  static async buscarPorCEP(cep) {
+    return await this.findAll({
+      where: { cep: cep.replace(/\D/g, '') }
+    });
+  }
+
+  static async buscarPorCidade(cidade, options = {}) {
+    return await this.findAll({
+      where: { cidade },
+      ...options
+    });
+  }
+
+  static async buscarPorEstado(estado, options = {}) {
+    return await this.findAll({
+      where: { estado: estado.toUpperCase() },
+      ...options
+    });
+  }
+
+  async pertenceAUsuario(usuarioId) {
+    return this.usuario_id === parseInt(usuarioId);
+  }
+
+  getEnderecoCompleto() {
+    let endereco = `${this.rua}`;
+    
+    if (this.nro) {
+      endereco += `, ${this.nro}`;
+    }
+    
+    if (this.complemento) {
+      endereco += `, ${this.complemento}`;
+    }
+    
+    endereco += ` - ${this.bairro}, ${this.cidade}/${this.estado}`;
+    endereco += ` - CEP: ${this.getCEPFormatado()}`;
+    
+    return endereco;
+  }
+
+  getCEPFormatado() {
+    if (!this.cep) return '';
+    return this.cep.replace(/(\d{5})(\d{3})/, '$1-$2');
+  }
+
+  async getUsuario() {
+    if (!this.Usuario) {
+      return await Usuario.findByPk(this.usuario_id);
+    }
+    return this.Usuario;
+  }
+
+  isValidCEP() {
+    return /^\d{8}$/.test(this.cep);
+  }
+}
+
+Endereco.init({
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -74,9 +139,12 @@ const Endereco = sequelize.define('endereco', {
     type: DataTypes.STRING,
     allowNull: true
   }
+}, {
+  sequelize,
+  modelName: 'endereco'
 });
 
 Endereco.belongsTo(Usuario, { foreignKey: 'usuario_id' });
-Usuario.hasMany(Endereco, { foreignKey: 'usuario_id' });
+Usuario.hasMany(Endereco, { foreignKey: 'usuario_id', as: 'enderecos' });
 
 module.exports = Endereco;

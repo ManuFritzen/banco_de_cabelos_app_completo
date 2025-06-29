@@ -165,6 +165,8 @@ const MinhasAnalisesTela: React.FC = () => {
         return 'Aprovada';
       case 4:
         return 'Recusada';
+      case 6:
+        return 'Cancelada pelo solicitante';
       default:
         return `Status ${statusId}`;
     }
@@ -180,6 +182,8 @@ const MinhasAnalisesTela: React.FC = () => {
         return { bg: tw.bgGreen100, text: { color: '#10b981' } };
       case 4:
         return { bg: tw.bgRed100, text: { color: '#ef4444' } };
+      case 6:
+        return { bg: tw.bgGray100, text: { color: '#6b7280' } };
       default:
         return { bg: tw.bgGray100, text: tw.textGray600 };
     }
@@ -231,12 +235,14 @@ const MinhasAnalisesTela: React.FC = () => {
           </View>
           
           <Row>
-            <TouchableOpacity
-              style={[themeStyles.bgSecondary, tw.pX3, tw.pY1, tw.roundedFull, tw.mR2]}
-              onPress={() => abrirModalStatus(item)}
-            >
-              <Text style={[tw.textWhite, tw.textXs]}>Atualizar</Text>
-            </TouchableOpacity>
+            {item.status_solicitacao_id !== 6 && (
+              <TouchableOpacity
+                style={[themeStyles.bgSecondary, tw.pX3, tw.pY1, tw.roundedFull, tw.mR2]}
+                onPress={() => abrirModalStatus(item)}
+              >
+                <Text style={[tw.textWhite, tw.textXs]}>Atualizar</Text>
+              </TouchableOpacity>
+            )}
             
             {item.status_solicitacao_id <= 2 && (
               <TouchableOpacity
@@ -364,13 +370,16 @@ const MinhasAnalisesTela: React.FC = () => {
                 
                 <View style={tw.mB4}>
                   <Text style={[themeStyles.textText, tw.fontMedium, tw.mB3]}>Status da Análise</Text>
-                  {analiseSelecionada.status_solicitacao_id >= 3 ? (
+                  {analiseSelecionada.status_solicitacao_id >= 3 || analiseSelecionada.status_solicitacao_id === 6 ? (
                     <View style={[tw.pY3, tw.pX4, tw.bgGray100, tw.roundedLg]}>
                       <Text style={[tw.textGray600, tw.textCenter, tw.fontMedium]}>
                         Status final: {getNomeStatus(analiseSelecionada.status_solicitacao_id)}
                       </Text>
                       <Text style={[tw.textGray500, tw.textCenter, tw.textSm, tw.mT1]}>
-                        Não é possível alterar análises aprovadas ou recusadas
+                        {analiseSelecionada.status_solicitacao_id === 6 
+                          ? 'Solicitação cancelada pelo solicitante'
+                          : 'Não é possível alterar análises aprovadas ou recusadas'
+                        }
                       </Text>
                     </View>
                   ) : (
@@ -417,10 +426,10 @@ const MinhasAnalisesTela: React.FC = () => {
                     tw.roundedLg, 
                     tw.pY3, 
                     tw.itemsCenter,
-                    (analiseSelecionada.status_solicitacao_id >= 3 || salvandoStatus) && tw.opacity50
+                    (analiseSelecionada.status_solicitacao_id >= 3 || analiseSelecionada.status_solicitacao_id === 6 || salvandoStatus) && tw.opacity50
                   ]}
                   onPress={salvarStatus}
-                  disabled={salvandoStatus || analiseSelecionada.status_solicitacao_id >= 3}
+                  disabled={salvandoStatus || analiseSelecionada.status_solicitacao_id >= 3 || analiseSelecionada.status_solicitacao_id === 6}
                 >
                   {salvandoStatus ? (
                     <ActivityIndicator size="small" color="#FFF" />

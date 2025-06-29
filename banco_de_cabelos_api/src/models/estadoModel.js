@@ -1,7 +1,25 @@
-const { DataTypes } = require('sequelize');
+const { DataTypes, Model } = require('sequelize');
 const { sequelize } = require('../../config/database');
 
-const Estado = sequelize.define('estado', {
+class Estado extends Model {
+  static async buscarPorSigla(sigla) {
+    return await this.findOne({
+      where: { sigla: sigla.toUpperCase() }
+    });
+  }
+
+  static async listarTodos() {
+    return await this.findAll({
+      order: [['nome', 'ASC']]
+    });
+  }
+
+  toString() {
+    return `${this.nome} (${this.sigla})`;
+  }
+}
+
+Estado.init({
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -25,6 +43,9 @@ const Estado = sequelize.define('estado', {
       }
     }
   }
+}, {
+  sequelize,
+  modelName: 'estado'
 });
 
 module.exports = Estado;

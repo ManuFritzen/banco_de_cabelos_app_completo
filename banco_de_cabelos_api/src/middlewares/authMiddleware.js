@@ -35,14 +35,9 @@ class AuthMiddleware extends BaseMiddleware {
 
 const auth = async (req, res, next) => {
   try {
-    console.log('=== AUTH MIDDLEWARE ===');
-    console.log('Path:', req.path);
-    console.log('Method:', req.method);
-    
     const token = AuthMiddleware.extractTokenFromRequest(req);
     
     if (!token) {
-      console.log('Token não fornecido');
       return AuthMiddleware.sendError(res, 401, 'Token de acesso não fornecido');
     }
     
@@ -50,7 +45,6 @@ const auth = async (req, res, next) => {
 
     const isBlacklisted = await AuthMiddleware.isTokenBlacklisted(token);
     if (isBlacklisted) {
-      console.log('Token está na blacklist');
       return AuthMiddleware.sendError(res, 401, 'Token invalidado, faça login novamente');
     }
 
@@ -58,14 +52,11 @@ const auth = async (req, res, next) => {
       const decoded = AuthMiddleware.verifyToken(token);
       req.usuario = decoded;
       req.userId = decoded.id;
-      console.log('Usuário autenticado:', { id: decoded.id, tipo: decoded.tipo });
       next();
     } catch (error) {
-      console.log('Erro ao verificar token:', error.message);
       return AuthMiddleware.handleTokenError(error, req, res, next);
     }
   } catch (error) {
-    console.log('Erro geral na autenticação:', error.message);
     AuthMiddleware.logError('autenticação', error);
     return AuthMiddleware.sendError(res, 500, 'Erro interno do servidor');
   }
@@ -101,21 +92,15 @@ const authOptional = async (req, res, next) => {
 
 const verificarTipo = (tipos) => {
   return (req, res, next) => {
-    console.log('=== VERIFICAR TIPO ===');
-    console.log('Tipos permitidos:', tipos);
-    console.log('Usuário:', req.usuario);
-    
     if (AuthMiddleware.isLogoutRoute(req.path) && !req.usuario) {
       return next();
     }
     
     if (req.usuario && req.usuario.tipo === AuthMiddleware.TIPO_ADMIN) {
-      console.log('Usuário é admin, permitindo acesso');
       return next();
     }
     
     if (!req.usuario || !tipos.includes(req.usuario.tipo)) {
-      console.log('Acesso negado para tipo:', req.usuario?.tipo);
       return AuthMiddleware.sendError(
         res, 
         403, 
@@ -123,7 +108,6 @@ const verificarTipo = (tipos) => {
       );
     }
     
-    console.log('Tipo verificado com sucesso');
     next();
   };
 };

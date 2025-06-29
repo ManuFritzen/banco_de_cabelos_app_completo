@@ -172,18 +172,14 @@ const SolicitacaoPerucaTela: React.FC = () => {
         throw apiError; // Re-throw para ser capturado pelo catch principal
       }
       
-      // Mostra mensagem de sucesso
+      // Mostra mensagem de sucesso e redireciona automaticamente
       Alert.alert(
         'Solicitação Enviada',
         'Sua solicitação de peruca foi enviada com sucesso! Uma instituição entrará em contato em breve.',
         [
           { 
-            text: 'Ver Minhas Solicitações', 
-            onPress: () => navigation.navigate('EmConstrucao', { titulo: 'Minhas Solicitações' }) 
-          },
-          { 
             text: 'OK', 
-            onPress: () => navigation.goBack() 
+            onPress: () => navigation.navigate('MinhasSolicitacoes')
           }
         ]
       );

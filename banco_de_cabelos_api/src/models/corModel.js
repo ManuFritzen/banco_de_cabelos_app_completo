@@ -1,7 +1,25 @@
-const { DataTypes } = require('sequelize');
+const { DataTypes, Model } = require('sequelize');
 const { sequelize } = require('../../config/database');
 
-const Cor = sequelize.define('cor', {
+class Cor extends Model {
+  static async buscarPorNome(nome) {
+    return await this.findOne({
+      where: { nome }
+    });
+  }
+
+  static async listarTodas() {
+    return await this.findAll({
+      order: [['nome', 'ASC']]
+    });
+  }
+
+  toString() {
+    return this.nome;
+  }
+}
+
+Cor.init({
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -14,6 +32,9 @@ const Cor = sequelize.define('cor', {
       notEmpty: { msg: 'O nome da cor é obrigatório' }
     }
   }
+}, {
+  sequelize,
+  modelName: 'cor'
 });
 
 module.exports = Cor;

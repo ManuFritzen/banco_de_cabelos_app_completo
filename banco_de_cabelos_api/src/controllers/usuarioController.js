@@ -5,6 +5,8 @@ const fs = require('fs').promises;
 const path = require('path');
 const BaseController = require('./BaseController');
 const { Validators } = require('../utils/validators');
+const UsuarioService = require('../services/UsuarioService');
+const UsuarioView = require('../views/UsuarioView');
 require('dotenv').config();
 
 class UsuarioController extends BaseController {
@@ -102,67 +104,33 @@ class UsuarioController extends BaseController {
   }
 
   listarUsuariosJuridicos = asyncHandler(async (req, res) => {
-    const usuarios = await Usuario.findAll({
-      where: { tipo: UsuarioController.TIPO_JURIDICO },
-      attributes: this.getUsuarioAttributes(['senha', 'cpf']),
-      include: [
-        {
-          model: Endereco,
-          as: 'enderecos'
-        }
-      ]
-    });
-    
-    const usuariosJSON = JSON.parse(JSON.stringify(usuarios));
-    
-    this.sendSuccess(res, { data: usuariosJSON });
+    try {
+      const usuarios = await UsuarioService.listarUsuariosJuridicos();
+      const view = UsuarioView.list(usuarios);
+      return res.status(200).json(view);
+    } catch (error) {
+      return this.handleControllerError(error, res);
+    }
   });
 
   obterUsuarioPorId = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    
-    const idValidado = this.validateNumericId(id, 'ID do usuário');
-    
-    const usuario = await Usuario.findByPk(idValidado, {
-      attributes: this.getUsuarioAttributes(),
-      include: [
-        {
-          model: Endereco,
-          as: 'enderecos'
-        }
-      ]
-    });
-    
-    if (!usuario) {
-      throw new ApiError('Usuário não encontrado', 404);
+    try {
+      const { id } = req.params;
+      const usuario = await UsuarioService.obterUsuarioCompleto(id);
+      const view = UsuarioView.profile(usuario);
+      return res.status(200).json(view);
+    } catch (error) {
+      return this.handleControllerError(error, res);
     }
-    
-    const usuarioJSON = JSON.parse(JSON.stringify(usuario));
-    
-    this.sendSuccess(res, usuarioJSON);
   });
 
   criarUsuario = asyncHandler(async (req, res) => {
-    const { nome, email, senha, tipo, cnpj, cpf, telefone } = req.body;
-    
-    const dadosValidados = this.validateAndSanitizeUserData(req.body);
-    
     try {
-      const novoUsuario = await Usuario.create({
-        nome: dadosValidados.nome,
-        email: dadosValidados.email,
-        senha,
-        tipo: dadosValidados.tipo || tipo,
-        cnpj: dadosValidados.cnpj || cnpj,
-        cpf: dadosValidados.cpf || cpf,
-        telefone: dadosValidados.telefone || telefone
-      });
-      
-      const usuarioSanitizado = this.sanitizeUser(novoUsuario.toJSON());
-      
-      this.sendSuccess(res, usuarioSanitizado, 'Usuário criado com sucesso', 201);
+      const novoUsuario = await UsuarioService.criarUsuario(req.body);
+      const view = UsuarioView.created(novoUsuario);
+      return res.status(201).json(view);
     } catch (error) {
-      throw handleSequelizeError(error);
+      return this.handleControllerError(error, res);
     }
   });
 
@@ -229,39 +197,19 @@ class UsuarioController extends BaseController {
   });
 
   login = asyncHandler(async (req, res) => {
-    const { email, senha } = req.body;
-    
-    if (!email || !senha) {
-      throw new ApiError('Por favor, forneça email e senha', 400);
-    }
-    
-    if (!Validators.isValidEmail(email)) {
-      throw new ApiError('Email inválido', 400);
-    }
-    
-    const usuario = await Usuario.findOne({ where: { email } });
-    if (!usuario) {
-      throw new ApiError('Credenciais inválidas', 401);
-    }
-    
-    const senhaCorreta = await usuario.verificarSenha(senha);
-    if (!senhaCorreta) {
-      throw new ApiError('Credenciais inválidas', 401);
-    }
-    
-    const token = this.gerarTokenJWT(usuario);
-    
-    const response = {
-      token,
-      usuario: {
-        id: usuario.id,
-        nome: usuario.nome,
-        email: usuario.email,
-        tipo: usuario.tipo
+    try {
+      const { email, senha } = req.body;
+      
+      if (!email || !senha) {
+        throw new ApiError('Por favor, forneça email e senha', 400);
       }
-    };
-    
-    this.sendSuccess(res, response, 'Login realizado com sucesso');
+      
+      const authData = await UsuarioService.autenticarUsuario(email, senha);
+      const view = UsuarioView.login(authData);
+      return res.status(200).json(view);
+    } catch (error) {
+      return this.handleControllerError(error, res);
+    }
   });
 
   logout = asyncHandler(async (req, res) => {

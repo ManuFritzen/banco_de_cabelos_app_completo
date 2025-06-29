@@ -1,10 +1,102 @@
-const { DataTypes } = require('sequelize');
+const { DataTypes, Model } = require('sequelize');
 const { sequelize } = require('../../config/database');
 const TipoPeruca = require('./tipoPerucaModel');
 const Usuario = require('./usuarioModel');
 const Cor = require('./corModel');
 
-const Peruca = sequelize.define('peruca', {
+class Peruca extends Model {
+  static async buscarDisponiveis(options = {}) {
+    return await this.findAll({
+      where: { disponivel: true },
+      ...options
+    });
+  }
+
+  static async buscarPorInstituicao(instituicaoId, options = {}) {
+    return await this.findAll({
+      where: { instituicao_id: instituicaoId },
+      ...options
+    });
+  }
+
+  static async buscarPorTipo(tipoId, options = {}) {
+    return await this.findAll({
+      where: { tipo_peruca_id: tipoId },
+      ...options
+    });
+  }
+
+  static async buscarPorCor(corId, options = {}) {
+    return await this.findAll({
+      where: { cor_id: corId },
+      ...options
+    });
+  }
+
+  static async contarDisponiveis() {
+    return await this.count({
+      where: { disponivel: true }
+    });
+  }
+
+  static async contarPorInstituicao(instituicaoId) {
+    return await this.count({
+      where: { instituicao_id: instituicaoId }
+    });
+  }
+
+  isDisponivel() {
+    return this.disponivel === true;
+  }
+
+  async marcarComoDoada() {
+    return await this.update({ disponivel: false });
+  }
+
+  async marcarComoDisponivel() {
+    return await this.update({ disponivel: true });
+  }
+
+  async pertenceAInstituicao(instituicaoId) {
+    return this.instituicao_id === parseInt(instituicaoId);
+  }
+
+  getTamanhoNome() {
+    const tamanhos = {
+      'P': 'Pequeno',
+      'M': 'Médio', 
+      'G': 'Grande'
+    };
+    return tamanhos[this.tamanho] || 'Desconhecido';
+  }
+
+  async getInstituicao() {
+    if (!this.Instituicao) {
+      return await Usuario.findByPk(this.instituicao_id);
+    }
+    return this.Instituicao;
+  }
+
+  async getTipo() {
+    if (!this.TipoPeruca) {
+      return await TipoPeruca.findByPk(this.tipo_peruca_id);
+    }
+    return this.TipoPeruca;
+  }
+
+  async getCor() {
+    if (!this.Cor) {
+      return await Cor.findByPk(this.cor_id);
+    }
+    return this.Cor;
+  }
+
+  temFoto() {
+    return this.foto && this.foto.length > 0;
+  }
+}
+
+Peruca.init({
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -75,6 +167,8 @@ const Peruca = sequelize.define('peruca', {
     defaultValue: true
   }
 }, {
+  sequelize,
+  modelName: 'peruca',
   hooks: {
     beforeCreate: async (peruca) => {
       if (peruca.instituicao_id) {

@@ -74,20 +74,6 @@ class BaseMiddleware {
     console.error(`Erro no middleware ${context}:`, error);
   }
 
-  static createErrorHandler(context) {
-    return (error, req, res, next) => {
-      BaseMiddleware.logError(context, error);
-      
-      if (error instanceof multer.MulterError) {
-        if (error.code === 'LIMIT_FILE_SIZE') {
-          return BaseMiddleware.sendError(res, 400, 'Arquivo muito grande. Máximo permitido: 5MB');
-        }
-        return BaseMiddleware.sendError(res, 400, error.message);
-      }
-      
-      return BaseMiddleware.sendError(res, 500, 'Erro interno do servidor');
-    };
-  }
 }
 
 module.exports = BaseMiddleware;

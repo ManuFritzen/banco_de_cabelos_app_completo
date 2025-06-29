@@ -23,7 +23,7 @@ interface Instituicao {
   telefone?: string;
   enderecos?: {
     rua: string;
-    numero: string;
+    nro: string;
     bairro: string;
     cidade: string;
     estado: string;
@@ -103,7 +103,7 @@ const BuscarInstituicoesTela: React.FC = () => {
     
     const partes = [
       endereco.rua,
-      endereco.numero ? `, ${endereco.numero}` : '',
+      endereco.nro ? `, ${endereco.nro}` : '',
       endereco.bairro ? ` - ${endereco.bairro}` : '',
       endereco.cidade ? `, ${endereco.cidade}` : '',
       endereco.estado ? ` - ${endereco.estado}` : ''

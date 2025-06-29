@@ -1,8 +1,61 @@
-const { DataTypes } = require('sequelize');
+const { DataTypes, Model } = require('sequelize');
 const { sequelize } = require('../../config/database');
 const bcrypt = require('bcrypt');
 
-const Usuario = sequelize.define('usuario', {
+class Usuario extends Model {
+  async verificarSenha(senha) {
+    return await bcrypt.compare(senha, this.senha);
+  }
+
+  getSanitizedData() {
+    const { senha, ...dados } = this.toJSON();
+    return dados;
+  }
+
+  static async buscarPorEmail(email) {
+    return await this.findOne({ where: { email } });
+  }
+
+  static async buscarPorCPF(cpf) {
+    return await this.findOne({ where: { cpf } });
+  }
+
+  static async buscarPorCNPJ(cnpj) {
+    return await this.findOne({ where: { cnpj } });
+  }
+
+  static async contarPorTipo(tipo) {
+    return await this.count({ where: { tipo } });
+  }
+
+  static async listarUsuariosJuridicos() {
+    const { Endereco } = require('./index');
+    return await this.findAll({
+      where: { tipo: 'J' },
+      attributes: { exclude: ['senha', 'cpf'] },
+      include: [
+        {
+          model: Endereco,
+          as: 'enderecos'
+        }
+      ]
+    });
+  }
+
+  isAdmin() {
+    return this.tipo === 'A';
+  }
+
+  isPessoaFisica() {
+    return this.tipo === 'F';
+  }
+
+  isInstituicao() {
+    return this.tipo === 'J';
+  }
+}
+
+Usuario.init({
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -93,6 +146,8 @@ const Usuario = sequelize.define('usuario', {
   }
 
 }, {
+  sequelize,
+  modelName: 'usuario',
   hooks: {
     beforeCreate: async (usuario) => {
       if (usuario.senha) {
@@ -119,9 +174,5 @@ const Usuario = sequelize.define('usuario', {
     }
   }
 });
-
-Usuario.prototype.verificarSenha = async function(senha) {
-  return await bcrypt.compare(senha, this.senha);
-};
 
 module.exports = Usuario;

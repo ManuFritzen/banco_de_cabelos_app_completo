@@ -40,7 +40,7 @@ router.get('/:id', obterSolicitacaoPorId);
 router.get('/usuario/:usuario_id', listarSolicitacoesPorUsuario);
 router.post('/', verificarTipo(['F']), criarSolicitacao);
 router.post('/base64', verificarTipo(['F']), criarSolicitacaoBase64);
-router.put('/:id/status', verificarTipo(['J']), validacoesStatus, atualizarStatusSolicitacao);
+router.put('/:id/status', verificarTipo(['J', 'F']), validacoesStatus, atualizarStatusSolicitacao);
 router.put('/:id/observacao', verificarTipo(['F']), validacoesObservacao, atualizarObservacaoSolicitacao);
 router.delete('/:id', excluirSolicitacao);
 

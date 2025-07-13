@@ -1,10 +1,7 @@
 # App Banco de Cabelos
 
 <div align="center">
-  <video width="300" autoplay muted loop>
-    <source src="app.mp4" type="video/mp4">
-    Seu navegador não suporta a tag de vídeo.
-  </video>
+  <img src="app.gif" width="300" alt="Demonstração do App Banco de Cabelos">
 </div>
 
 ## Sobre o Projeto

@@ -118,6 +118,43 @@ npx expo start
 
 5. Use o Expo Go no seu dispositivo móvel ou um emulador para testar
 
+## API e Documentação
+
+### Collection do Postman
+
+Para facilitar o teste e integração com a API, disponibilizamos uma **collection completa do Postman** com todos os endpoints documentados e organizados por módulos:
+
+**Localização**: `banco_de_cabelos_api/docs/`
+
+**Arquivos disponíveis**:
+- `Banco_de_Cabelos_API.postman_collection.json` - Collection para importar no Postman
+
+### Como usar a Collection:
+
+1. **Importar no Postman**:
+   - Abra o Postman
+   - Clique em **Import**
+   - Selecione o arquivo `banco_de_cabelos_api/docs/Banco_de_Cabelos_API.postman_collection.json`
+
+2. **Configurar Variáveis**:
+   - `base_url`: `http://localhost:3000/api`
+   - Configure os tokens JWT após fazer login
+
+3. **Testar Endpoints**:
+   - A collection inclui **89 endpoints** organizados em **15 módulos**
+   - Exemplos de requisição para todos os casos de uso
+   - Documentação embutida em cada endpoint
+
+### Módulos da API:
+- ✅ Autenticação e Gestão de Usuários
+- ✅ Administração do Sistema
+- ✅ Gestão de Endereços
+- ✅ Catálogo de Perucas
+- ✅ Solicitações e Análises
+- ✅ Doações de Cabelo
+- ✅ Fórum Comunitário
+- ✅ Sistema de Curtidas
+- ✅ Notificações
 
 ## Segurança e Privacidade
 

@@ -41,10 +41,7 @@ const LoginTela: React.FC = () => {
   const navegarParaCadastro = () => {
     navigation.navigate('Cadastro');
   };
-  
-  const voltar = () => {
-    navigation.goBack();
-  };
+
   
   const handleSubmit = async (values: { email: string; senha: string }) => {
     setCarregando(true);
@@ -77,9 +74,7 @@ const LoginTela: React.FC = () => {
       <SafeContainer style={tw.flex1}>
         <ScrollContainer keyboardShouldPersistTaps="always" style={tw.flex1} contentContainerStyle={tw.flexGrow}>
           <Container style={tw.p6}>
-            <BotaoIcone onPress={voltar}>
-              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-            </BotaoIcone>
+      
 
             <View style={[tw.itemsCenter, tw.mB8]}>
               <Text

@@ -1,5 +1,12 @@
 # App Banco de Cabelos
 
+<div align="center">
+  <video width="300" autoplay muted loop>
+    <source src="app.mp4" type="video/mp4">
+    Seu navegador não suporta a tag de vídeo.
+  </video>
+</div>
+
 ## Sobre o Projeto
 
 O App Banco de Cabelos é uma plataforma móvel desenvolvida como Trabalho de Conclusão de Curso que visa conectar doadores de cabelo, instituições beneficentes e pessoas que necessitam de perucas devido a condições médicas como câncer, alopecia, lúpus e outras doenças.

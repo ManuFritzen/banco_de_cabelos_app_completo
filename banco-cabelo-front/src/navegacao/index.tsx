@@ -242,7 +242,7 @@ const NavegacaoAutenticacao = () => {
       screenOptions={{
         headerShown: false,
       }}
-      initialRouteName="Login"
+      initialRouteName="BoasVindas"
     >
       <AutenticacaoStack.Screen name="BoasVindas" component={BoasVindasTela} />
       <AutenticacaoStack.Screen name="Login" component={LoginTela} />

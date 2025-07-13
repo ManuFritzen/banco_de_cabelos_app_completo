@@ -1,0 +1,2160 @@
+{
+	"info": {
+		"_postman_id": "banco-cabelos-api-collection",
+		"name": "Banco de Cabelos API",
+		"description": "Collection completa da API do App Banco de Cabelos - Trabalho de Conclusão de Curso\n\nEsta API gerencia um sistema de doação de cabelos e distribuição de perucas para pessoas com necessidades médicas.\n\n**Autora**: Emanuelle Fritzen Machado\n**Orientador**: Prof. Dr. Igor Avila Pereira\n**Coorientador**: Prof. Msc. Vinicius Fritzen Machado\n\n## Tipos de Usuário:\n- **F**: Pessoa Física (doadores e beneficiários)\n- **J**: Pessoa Jurídica (instituições)\n- **A**: Administrador\n\n## Autenticação:\nA maioria dos endpoints requer token JWT no header:\n```\nAuthorization: Bearer {token}\n```\n\n## Base URL:\n```\nhttp://localhost:3000/api\n```",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Status e Configuração",
+			"item": [
+				{
+					"name": "Status da API",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/status",
+							"host": ["{{base_url}}"],
+							"path": ["status"]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para verificar status da API e configurações básicas"
+		},
+		{
+			"name": "2. Autenticação",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"usuario@email.com\",\n  \"senha\": \"senha123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/usuarios/login",
+							"host": ["{{base_url}}"],
+							"path": ["usuarios", "login"]
+						},
+						"description": "Realiza login e retorna token JWT para autenticação"
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/usuarios/logout",
+							"host": ["{{base_url}}"],
+							"path": ["usuarios", "logout"]
+						},
+						"description": "Invalida o token JWT atual (blacklist)"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para autenticação de usuários"
+		},
+		{
+			"name": "3. Gestão de Usuários",
+			"item": [
+				{
+					"name": "Verificações de Disponibilidade",
+					"item": [
+						{
+							"name": "Verificar CPF Disponível",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/usuarios/verificar/cpf/12345678901",
+									"host": ["{{base_url}}"],
+									"path": ["usuarios", "verificar", "cpf", "12345678901"]
+								},
+								"description": "Verifica se um CPF já está cadastrado no sistema"
+							},
+							"response": []
+						},
+						{
+							"name": "Verificar CNPJ Disponível",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/usuarios/verificar/cnpj/12345678901234",
+									"host": ["{{base_url}}"],
+									"path": ["usuarios", "verificar", "cnpj", "12345678901234"]
+								},
+								"description": "Verifica se um CNPJ já está cadastrado no sistema"
+							},
+							"response": []
+						},
+						{
+							"name": "Verificar Email Disponível",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/usuarios/verificar/email/usuario@email.com",
+									"host": ["{{base_url}}"],
+									"path": ["usuarios", "verificar", "email", "usuario@email.com"]
+								},
+								"description": "Verifica se um email já está cadastrado no sistema"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "CRUD de Usuários",
+					"item": [
+						{
+							"name": "Cadastrar Usuário",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"nome\": \"Nome do Usuário\",\n  \"email\": \"usuario@email.com\",\n  \"senha\": \"senha123\",\n  \"tipo\": \"F\",\n  \"cpf\": \"12345678901\",\n  \"telefone\": \"51999999999\",\n  \"data_nascimento\": \"1990-01-01\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/usuarios",
+									"host": ["{{base_url}}"],
+									"path": ["usuarios"]
+								},
+								"description": "Cadastra novo usuário (Pessoa Física ou Jurídica)"
+							},
+							"response": []
+						},
+						{
+							"name": "Listar Instituições",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/usuarios/instituicoes",
+									"host": ["{{base_url}}"],
+									"path": ["usuarios", "instituicoes"]
+								},
+								"description": "Lista todas as instituições (usuários jurídicos)"
+							},
+							"response": []
+						},
+						{
+							"name": "Buscar Usuário por ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/usuarios/1",
+									"host": ["{{base_url}}"],
+									"path": ["usuarios", "1"]
+								},
+								"description": "Busca um usuário específico pelo ID"
+							},
+							"response": []
+						},
+						{
+							"name": "Atualizar Usuário",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"nome\": \"Nome Atualizado\",\n  \"telefone\": \"51888888888\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/usuarios/1",
+									"host": ["{{base_url}}"],
+									"path": ["usuarios", "1"]
+								},
+								"description": "Atualiza dados de um usuário"
+							},
+							"response": []
+						},
+						{
+							"name": "Deletar Usuário",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/usuarios/1",
+									"host": ["{{base_url}}"],
+									"path": ["usuarios", "1"]
+								},
+								"description": "Remove um usuário do sistema"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Gestão de Foto de Perfil",
+					"item": [
+						{
+							"name": "Upload Foto (Multipart)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "foto",
+											"type": "file",
+											"src": []
+										}
+									]
+								},
+								"url": {
+									"raw": "{{base_url}}/usuarios/1/foto",
+									"host": ["{{base_url}}"],
+									"path": ["usuarios", "1", "foto"]
+								},
+								"description": "Upload de foto de perfil via multipart/form-data"
+							},
+							"response": []
+						},
+						{
+							"name": "Upload Foto (Base64)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"imagem\": \"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/usuarios/1/foto-base64",
+									"host": ["{{base_url}}"],
+									"path": ["usuarios", "1", "foto-base64"]
+								},
+								"description": "Upload de foto de perfil via Base64"
+							},
+							"response": []
+						},
+						{
+							"name": "Visualizar Foto",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/usuarios/1/foto",
+									"host": ["{{base_url}}"],
+									"path": ["usuarios", "1", "foto"]
+								},
+								"description": "Visualiza foto de perfil como arquivo"
+							},
+							"response": []
+						},
+						{
+							"name": "Visualizar Foto (Base64)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/usuarios/1/foto-base64",
+									"host": ["{{base_url}}"],
+									"path": ["usuarios", "1", "foto-base64"]
+								},
+								"description": "Visualiza foto de perfil em formato Base64"
+							},
+							"response": []
+						},
+						{
+							"name": "Deletar Foto",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/usuarios/1/foto",
+									"host": ["{{base_url}}"],
+									"path": ["usuarios", "1", "foto"]
+								},
+								"description": "Remove foto de perfil do usuário"
+							},
+							"response": []
+						}
+					]
+				}
+			],
+			"description": "Endpoints para gestão completa de usuários"
+		},
+		{
+			"name": "4. Administração",
+			"item": [
+				{
+					"name": "Setup Inicial do Admin",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nome\": \"Administrador\",\n  \"email\": \"admin@bancocabelos.com\",\n  \"senha\": \"admin123\",\n  \"codigo_secreto\": \"CODIGO_SECRETO_ADMIN\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/setup",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "setup"]
+						},
+						"description": "Cria o primeiro usuário administrador do sistema"
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Todos os Usuários",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/usuarios",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "usuarios"]
+						},
+						"description": "Lista todos os usuários do sistema (apenas admin)"
+					},
+					"response": []
+				},
+				{
+					"name": "Alterar Tipo de Usuário",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tipo\": \"A\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/usuarios/1/tipo",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "usuarios", "1", "tipo"]
+						},
+						"description": "Altera o tipo de um usuário (F, J ou A)"
+					},
+					"response": []
+				},
+				{
+					"name": "Desativar Usuário",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/usuarios/1/desativar",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "usuarios", "1", "desativar"]
+						},
+						"description": "Desativa/reativa um usuário do sistema"
+					},
+					"response": []
+				},
+				{
+					"name": "Estatísticas do Sistema",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/estatisticas",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "estatisticas"]
+						},
+						"description": "Estatísticas gerais do sistema para dashboard admin"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints exclusivos para administradores do sistema"
+		},
+		{
+			"name": "5. Endereços",
+			"item": [
+				{
+					"name": "Consultar CEP",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/enderecos/cep/12345678",
+							"host": ["{{base_url}}"],
+							"path": ["enderecos", "cep", "12345678"]
+						},
+						"description": "Consulta dados de um CEP via integração com ViaCEP"
+					},
+					"response": []
+				},
+				{
+					"name": "Cadastro de Endereço",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"usuario_id\": 1,\n  \"cidade_id\": 1,\n  \"bairro\": \"Centro\",\n  \"rua\": \"Rua Principal\",\n  \"cep\": \"12345678\",\n  \"numero\": \"123\",\n  \"complemento\": \"Apto 101\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/enderecos/cadastro",
+							"host": ["{{base_url}}"],
+							"path": ["enderecos", "cadastro"]
+						},
+						"description": "Cadastra um novo endereço"
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Endereços",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/enderecos",
+							"host": ["{{base_url}}"],
+							"path": ["enderecos"]
+						},
+						"description": "Lista endereços (requer tipo Jurídico)"
+					},
+					"response": []
+				},
+				{
+					"name": "Endereços do Usuário",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/enderecos/usuario/1",
+							"host": ["{{base_url}}"],
+							"path": ["enderecos", "usuario", "1"]
+						},
+						"description": "Lista endereços de um usuário específico"
+					},
+					"response": []
+				},
+				{
+					"name": "Criar Endereço",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"usuario_id\": 1,\n  \"cidade_id\": 1,\n  \"bairro\": \"Centro\",\n  \"rua\": \"Rua Principal\",\n  \"cep\": \"12345678\",\n  \"numero\": \"123\",\n  \"complemento\": \"Apto 101\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/enderecos",
+							"host": ["{{base_url}}"],
+							"path": ["enderecos"]
+						},
+						"description": "Cria um novo endereço (autenticado)"
+					},
+					"response": []
+				},
+				{
+					"name": "Atualizar Endereço",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"bairro\": \"Centro Atualizado\",\n  \"numero\": \"456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/enderecos/1",
+							"host": ["{{base_url}}"],
+							"path": ["enderecos", "1"]
+						},
+						"description": "Atualiza um endereço existente"
+					},
+					"response": []
+				},
+				{
+					"name": "Deletar Endereço",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/enderecos/1",
+							"host": ["{{base_url}}"],
+							"path": ["enderecos", "1"]
+						},
+						"description": "Remove um endereço"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para gestão de endereços e consulta de CEP"
+		},
+		{
+			"name": "6. Perucas",
+			"item": [
+				{
+					"name": "Consultas Públicas",
+					"item": [
+						{
+							"name": "Listar Todas as Perucas",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/perucas",
+									"host": ["{{base_url}}"],
+									"path": ["perucas"]
+								},
+								"description": "Lista todas as perucas disponíveis"
+							},
+							"response": []
+						},
+						{
+							"name": "Listar Cores",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/perucas/cores",
+									"host": ["{{base_url}}"],
+									"path": ["perucas", "cores"]
+								},
+								"description": "Lista todas as cores de cabelo disponíveis"
+							},
+							"response": []
+						},
+						{
+							"name": "Listar Tipos de Peruca",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/perucas/tipos",
+									"host": ["{{base_url}}"],
+									"path": ["perucas", "tipos"]
+								},
+								"description": "Lista todos os tipos de peruca disponíveis"
+							},
+							"response": []
+						},
+						{
+							"name": "Buscar Peruca por ID",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/perucas/1",
+									"host": ["{{base_url}}"],
+									"path": ["perucas", "1"]
+								},
+								"description": "Busca uma peruca específica pelo ID"
+							},
+							"response": []
+						},
+						{
+							"name": "Perucas por Instituição",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/perucas/instituicao/1",
+									"host": ["{{base_url}}"],
+									"path": ["perucas", "instituicao", "1"]
+								},
+								"description": "Lista perucas de uma instituição específica"
+							},
+							"response": []
+						},
+						{
+							"name": "Visualizar Imagem da Peruca",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/perucas/1/imagem",
+									"host": ["{{base_url}}"],
+									"path": ["perucas", "1", "imagem"]
+								},
+								"description": "Visualiza a imagem de uma peruca"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Gestão de Perucas (Instituições)",
+					"item": [
+						{
+							"name": "Cadastrar Peruca (Multipart)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{instituicao_token}}"
+									}
+								],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "tipo_peruca_id",
+											"value": "1",
+											"type": "text"
+										},
+										{
+											"key": "cor_id",
+											"value": "2",
+											"type": "text"
+										},
+										{
+											"key": "comprimento",
+											"value": "30.5",
+											"type": "text"
+										},
+										{
+											"key": "tamanho",
+											"value": "M",
+											"type": "text"
+										},
+										{
+											"key": "descricao",
+											"value": "Peruca de cabelo natural",
+											"type": "text"
+										},
+										{
+											"key": "imagem",
+											"type": "file",
+											"src": []
+										}
+									]
+								},
+								"url": {
+									"raw": "{{base_url}}/perucas",
+									"host": ["{{base_url}}"],
+									"path": ["perucas"]
+								},
+								"description": "Cadastra peruca com upload de imagem (multipart)"
+							},
+							"response": []
+						},
+						{
+							"name": "Cadastrar Peruca (Base64)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{instituicao_token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"tipo_peruca_id\": 1,\n  \"cor_id\": 2,\n  \"comprimento\": 30.5,\n  \"tamanho\": \"M\",\n  \"descricao\": \"Peruca de cabelo natural sintético\",\n  \"imagem\": \"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/perucas/base64",
+									"host": ["{{base_url}}"],
+									"path": ["perucas", "base64"]
+								},
+								"description": "Cadastra peruca com imagem em Base64"
+							},
+							"response": []
+						},
+						{
+							"name": "Atualizar Peruca",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{instituicao_token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"descricao\": \"Descrição atualizada da peruca\",\n  \"comprimento\": 35.0\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/perucas/1",
+									"host": ["{{base_url}}"],
+									"path": ["perucas", "1"]
+								},
+								"description": "Atualiza dados de uma peruca"
+							},
+							"response": []
+						},
+						{
+							"name": "Deletar Peruca",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{instituicao_token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/perucas/1",
+									"host": ["{{base_url}}"],
+									"path": ["perucas", "1"]
+								},
+								"description": "Remove uma peruca do sistema"
+							},
+							"response": []
+						}
+					]
+				}
+			],
+			"description": "Endpoints para gestão de perucas e consultas públicas"
+		},
+		{
+			"name": "7. Solicitações",
+			"item": [
+				{
+					"name": "Visualizar Laudo Médico",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/solicitacoes/1/laudo",
+							"host": ["{{base_url}}"],
+							"path": ["solicitacoes", "1", "laudo"]
+						},
+						"description": "Visualiza o laudo médico de uma solicitação"
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Solicitações",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instituicao_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/solicitacoes",
+							"host": ["{{base_url}}"],
+							"path": ["solicitacoes"]
+						},
+						"description": "Lista solicitações (apenas instituições)"
+					},
+					"response": []
+				},
+				{
+					"name": "Buscar Solicitação por ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/solicitacoes/1",
+							"host": ["{{base_url}}"],
+							"path": ["solicitacoes", "1"]
+						},
+						"description": "Busca uma solicitação específica"
+					},
+					"response": []
+				},
+				{
+					"name": "Solicitações do Usuário",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/solicitacoes/usuario/1",
+							"host": ["{{base_url}}"],
+							"path": ["solicitacoes", "usuario", "1"]
+						},
+						"description": "Lista solicitações de um usuário específico"
+					},
+					"response": []
+				},
+				{
+					"name": "Criar Solicitação (Multipart)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{pessoa_fisica_token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "tipo_peruca_id",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "cor_id",
+									"value": "2",
+									"type": "text"
+								},
+								{
+									"key": "comprimento_minimo",
+									"value": "25",
+									"type": "text"
+								},
+								{
+									"key": "comprimento_maximo",
+									"value": "35",
+									"type": "text"
+								},
+								{
+									"key": "tamanho",
+									"value": "M",
+									"type": "text"
+								},
+								{
+									"key": "observacao",
+									"value": "Preciso urgente para tratamento",
+									"type": "text"
+								},
+								{
+									"key": "laudo",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/solicitacoes",
+							"host": ["{{base_url}}"],
+							"path": ["solicitacoes"]
+						},
+						"description": "Cria solicitação com upload de laudo médico"
+					},
+					"response": []
+				},
+				{
+					"name": "Criar Solicitação (Base64)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{pessoa_fisica_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tipo_peruca_id\": 1,\n  \"cor_id\": 2,\n  \"comprimento_minimo\": 25,\n  \"comprimento_maximo\": 35,\n  \"tamanho\": \"M\",\n  \"observacao\": \"Necessito para tratamento de quimioterapia\",\n  \"laudo\": \"data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFI...\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/solicitacoes/base64",
+							"host": ["{{base_url}}"],
+							"path": ["solicitacoes", "base64"]
+						},
+						"description": "Cria solicitação com laudo em Base64"
+					},
+					"response": []
+				},
+				{
+					"name": "Atualizar Status da Solicitação",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status_solicitacao_id\": 2,\n  \"observacao\": \"Solicitação aprovada para análise\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/solicitacoes/1/status",
+							"host": ["{{base_url}}"],
+							"path": ["solicitacoes", "1", "status"]
+						},
+						"description": "Atualiza o status de uma solicitação"
+					},
+					"response": []
+				},
+				{
+					"name": "Atualizar Observação",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{pessoa_fisica_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"observacao\": \"Informações adicionais sobre a necessidade\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/solicitacoes/1/observacao",
+							"host": ["{{base_url}}"],
+							"path": ["solicitacoes", "1", "observacao"]
+						},
+						"description": "Atualiza observação da solicitação (apenas pessoa física)"
+					},
+					"response": []
+				},
+				{
+					"name": "Deletar Solicitação",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/solicitacoes/1",
+							"host": ["{{base_url}}"],
+							"path": ["solicitacoes", "1"]
+						},
+						"description": "Remove uma solicitação"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para gestão de solicitações de perucas"
+		},
+		{
+			"name": "8. Análise de Solicitações por Instituições",
+			"item": [
+				{
+					"name": "Analisar Solicitação",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instituicao_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"observacao\": \"Análise realizada com aprovação\",\n  \"status\": \"aprovado\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/solicitacoes-instituicao/analisar/1",
+							"host": ["{{base_url}}"],
+							"path": ["solicitacoes-instituicao", "analisar", "1"]
+						},
+						"description": "Instituição analisa uma solicitação"
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Análises da Instituição",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instituicao_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/solicitacoes-instituicao",
+							"host": ["{{base_url}}"],
+							"path": ["solicitacoes-instituicao"]
+						},
+						"description": "Lista análises realizadas pela instituição"
+					},
+					"response": []
+				},
+				{
+					"name": "Buscar Análise por ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instituicao_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/solicitacoes-instituicao/1",
+							"host": ["{{base_url}}"],
+							"path": ["solicitacoes-instituicao", "1"]
+						},
+						"description": "Busca uma análise específica"
+					},
+					"response": []
+				},
+				{
+					"name": "Atualizar Análise",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instituicao_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"observacao\": \"Análise atualizada\",\n  \"status\": \"rejeitado\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/solicitacoes-instituicao/1",
+							"host": ["{{base_url}}"],
+							"path": ["solicitacoes-instituicao", "1"]
+						},
+						"description": "Atualiza status de uma análise"
+					},
+					"response": []
+				},
+				{
+					"name": "Deletar Análise",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instituicao_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/solicitacoes-instituicao/1",
+							"host": ["{{base_url}}"],
+							"path": ["solicitacoes-instituicao", "1"]
+						},
+						"description": "Remove análise pendente"
+					},
+					"response": []
+				}
+			],
+			"description": "Sistema de análise democrática de solicitações por múltiplas instituições"
+		},
+		{
+			"name": "9. Recebimento de Cabelo",
+			"item": [
+				{
+					"name": "Registrar Doação (Multipart)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{pessoa_fisica_token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "instituicao_id",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "peso",
+									"value": "150.5",
+									"type": "text"
+								},
+								{
+									"key": "comprimento",
+									"value": "30",
+									"type": "text"
+								},
+								{
+									"key": "cor_id",
+									"value": "2",
+									"type": "text"
+								},
+								{
+									"key": "observacao",
+									"value": "Cabelo natural sem química",
+									"type": "text"
+								},
+								{
+									"key": "imagem",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/recebimento",
+							"host": ["{{base_url}}"],
+							"path": ["recebimento"]
+						},
+						"description": "Registra doação de cabelo com foto"
+					},
+					"response": []
+				},
+				{
+					"name": "Registrar Doação (Base64)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{pessoa_fisica_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"instituicao_id\": 1,\n  \"peso\": 150.5,\n  \"comprimento\": 30,\n  \"cor_id\": 2,\n  \"observacao\": \"Cabelo virgem, nunca foi tingido\",\n  \"imagem\": \"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/recebimento/base64",
+							"host": ["{{base_url}}"],
+							"path": ["recebimento", "base64"]
+						},
+						"description": "Registra doação com imagem em Base64"
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Todas as Doações (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/recebimento",
+							"host": ["{{base_url}}"],
+							"path": ["recebimento"]
+						},
+						"description": "Lista todas as doações (apenas admin)"
+					},
+					"response": []
+				},
+				{
+					"name": "Minhas Doações",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{pessoa_fisica_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/recebimento/pessoa",
+							"host": ["{{base_url}}"],
+							"path": ["recebimento", "pessoa"]
+						},
+						"description": "Lista doações do usuário logado"
+					},
+					"response": []
+				},
+				{
+					"name": "Doações Recebidas (Instituição)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instituicao_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/recebimento/instituicao",
+							"host": ["{{base_url}}"],
+							"path": ["recebimento", "instituicao"]
+						},
+						"description": "Lista cabelos recebidos pela instituição"
+					},
+					"response": []
+				},
+				{
+					"name": "Visualizar Imagem do Cabelo",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/recebimento/imagem/1",
+							"host": ["{{base_url}}"],
+							"path": ["recebimento", "imagem", "1"]
+						},
+						"description": "Visualiza foto do cabelo doado"
+					},
+					"response": []
+				},
+				{
+					"name": "Buscar Doação por ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/recebimento/1",
+							"host": ["{{base_url}}"],
+							"path": ["recebimento", "1"]
+						},
+						"description": "Busca uma doação específica"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para registro e gestão de doações de cabelo"
+		},
+		{
+			"name": "10. Doações de Perucas",
+			"item": [
+				{
+					"name": "Listar Todas as Doações",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/doacoes",
+							"host": ["{{base_url}}"],
+							"path": ["doacoes"]
+						},
+						"description": "Lista todas as doações de perucas (admin/jurídico)"
+					},
+					"response": []
+				},
+				{
+					"name": "Doações por Instituição",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/doacoes/instituicao/1",
+							"host": ["{{base_url}}"],
+							"path": ["doacoes", "instituicao", "1"]
+						},
+						"description": "Lista doações de uma instituição específica"
+					},
+					"response": []
+				},
+				{
+					"name": "Doações por Solicitação",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/doacoes/solicitacao/1",
+							"host": ["{{base_url}}"],
+							"path": ["doacoes", "solicitacao", "1"]
+						},
+						"description": "Lista doações para uma solicitação específica"
+					},
+					"response": []
+				},
+				{
+					"name": "Buscar Doação por ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/doacoes/1",
+							"host": ["{{base_url}}"],
+							"path": ["doacoes", "1"]
+						},
+						"description": "Busca uma doação específica"
+					},
+					"response": []
+				},
+				{
+					"name": "Registrar Doação de Peruca",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instituicao_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"peruca_id\": 1,\n  \"solicitacao_id\": 1,\n  \"observacao\": \"Peruca entregue em perfeito estado\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/doacoes",
+							"host": ["{{base_url}}"],
+							"path": ["doacoes"]
+						},
+						"description": "Registra doação de peruca para solicitação"
+					},
+					"response": []
+				},
+				{
+					"name": "Atualizar Doação",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instituicao_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"observacao\": \"Doação atualizada com nova informação\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/doacoes/1",
+							"host": ["{{base_url}}"],
+							"path": ["doacoes", "1"]
+						},
+						"description": "Atualiza informações de uma doação"
+					},
+					"response": []
+				},
+				{
+					"name": "Deletar Doação",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instituicao_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/doacoes/1",
+							"host": ["{{base_url}}"],
+							"path": ["doacoes", "1"]
+						},
+						"description": "Remove registro de doação"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para gestão de doações de perucas a beneficiários"
+		},
+		{
+			"name": "11. Fórum - Publicações",
+			"item": [
+				{
+					"name": "Listar Publicações",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"description": "Opcional - mais detalhes se autenticado"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/publicacoes",
+							"host": ["{{base_url}}"],
+							"path": ["publicacoes"]
+						},
+						"description": "Lista publicações do fórum (mais detalhes se autenticado)"
+					},
+					"response": []
+				},
+				{
+					"name": "Buscar Publicação por ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"description": "Opcional"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/publicacoes/1",
+							"host": ["{{base_url}}"],
+							"path": ["publicacoes", "1"]
+						},
+						"description": "Busca uma publicação específica"
+					},
+					"response": []
+				},
+				{
+					"name": "Criar Publicação",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"titulo\": \"Minha experiência com doação de cabelo\",\n  \"conteudo\": \"Gostaria de compartilhar como foi o processo de doação do meu cabelo e como isso me fez sentir bem em ajudar outras pessoas...\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/publicacoes",
+							"host": ["{{base_url}}"],
+							"path": ["publicacoes"]
+						},
+						"description": "Cria nova publicação no fórum"
+					},
+					"response": []
+				},
+				{
+					"name": "Atualizar Publicação",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"titulo\": \"Título atualizado\",\n  \"conteudo\": \"Conteúdo atualizado da publicação\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/publicacoes/1",
+							"host": ["{{base_url}}"],
+							"path": ["publicacoes", "1"]
+						},
+						"description": "Atualiza uma publicação (apenas o autor)"
+					},
+					"response": []
+				},
+				{
+					"name": "Deletar Publicação",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/publicacoes/1",
+							"host": ["{{base_url}}"],
+							"path": ["publicacoes", "1"]
+						},
+						"description": "Remove uma publicação (autor ou admin)"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para gestão de publicações no fórum comunitário"
+		},
+		{
+			"name": "12. Fórum - Comentários",
+			"item": [
+				{
+					"name": "Comentários da Publicação",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/comentarios/publicacao/1",
+							"host": ["{{base_url}}"],
+							"path": ["comentarios", "publicacao", "1"]
+						},
+						"description": "Lista comentários de uma publicação"
+					},
+					"response": []
+				},
+				{
+					"name": "Buscar Comentário por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/comentarios/1",
+							"host": ["{{base_url}}"],
+							"path": ["comentarios", "1"]
+						},
+						"description": "Busca um comentário específico"
+					},
+					"response": []
+				},
+				{
+					"name": "Criar Comentário",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"conteudo\": \"Muito interessante sua experiência! Também estou pensando em doar meu cabelo.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/comentarios/publicacao/1",
+							"host": ["{{base_url}}"],
+							"path": ["comentarios", "publicacao", "1"]
+						},
+						"description": "Adiciona comentário a uma publicação"
+					},
+					"response": []
+				},
+				{
+					"name": "Atualizar Comentário",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"conteudo\": \"Comentário atualizado com nova informação\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/comentarios/1",
+							"host": ["{{base_url}}"],
+							"path": ["comentarios", "1"]
+						},
+						"description": "Atualiza um comentário (apenas o autor)"
+					},
+					"response": []
+				},
+				{
+					"name": "Deletar Comentário",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/comentarios/1",
+							"host": ["{{base_url}}"],
+							"path": ["comentarios", "1"]
+						},
+						"description": "Remove um comentário (autor ou admin)"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para gestão de comentários nas publicações"
+		},
+		{
+			"name": "13. Fórum - Anexos",
+			"item": [
+				{
+					"name": "Anexos da Publicação",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/anexos/publicacao/1",
+							"host": ["{{base_url}}"],
+							"path": ["anexos", "publicacao", "1"]
+						},
+						"description": "Lista anexos de uma publicação"
+					},
+					"response": []
+				},
+				{
+					"name": "Buscar Anexo por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/anexos/1",
+							"host": ["{{base_url}}"],
+							"path": ["anexos", "1"]
+						},
+						"description": "Visualiza um anexo específico"
+					},
+					"response": []
+				},
+				{
+					"name": "Upload Anexo (Multipart)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "anexo",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/anexos/publicacao/1",
+							"host": ["{{base_url}}"],
+							"path": ["anexos", "publicacao", "1"]
+						},
+						"description": "Adiciona anexo a uma publicação (multipart)"
+					},
+					"response": []
+				},
+				{
+					"name": "Upload Anexo (Base64)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"anexo\": \"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...\",\n  \"nome\": \"foto_cabelo_doado.jpg\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/anexos/publicacao/1/base64",
+							"host": ["{{base_url}}"],
+							"path": ["anexos", "publicacao", "1", "base64"]
+						},
+						"description": "Adiciona anexo via Base64"
+					},
+					"response": []
+				},
+				{
+					"name": "Deletar Anexo",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/anexos/1",
+							"host": ["{{base_url}}"],
+							"path": ["anexos", "1"]
+						},
+						"description": "Remove um anexo"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para gestão de anexos (imagens) nas publicações"
+		},
+		{
+			"name": "14. Sistema de Curtidas",
+			"item": [
+				{
+					"name": "Curtidas em Publicações",
+					"item": [
+						{
+							"name": "Curtir Publicação",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/curtidas/publicacao/1",
+									"host": ["{{base_url}}"],
+									"path": ["curtidas", "publicacao", "1"]
+								},
+								"description": "Adiciona curtida a uma publicação"
+							},
+							"response": []
+						},
+						{
+							"name": "Descurtir Publicação",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/curtidas/publicacao/1",
+									"host": ["{{base_url}}"],
+									"path": ["curtidas", "publicacao", "1"]
+								},
+								"description": "Remove curtida de uma publicação"
+							},
+							"response": []
+						},
+						{
+							"name": "Verificar Curtida na Publicação",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/curtidas/publicacao/1",
+									"host": ["{{base_url}}"],
+									"path": ["curtidas", "publicacao", "1"]
+								},
+								"description": "Verifica se usuário curtiu a publicação"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Curtidas em Comentários",
+					"item": [
+						{
+							"name": "Curtir Comentário",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/curtidas/comentario/1",
+									"host": ["{{base_url}}"],
+									"path": ["curtidas", "comentario", "1"]
+								},
+								"description": "Adiciona curtida a um comentário"
+							},
+							"response": []
+						},
+						{
+							"name": "Descurtir Comentário",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/curtidas/comentario/1",
+									"host": ["{{base_url}}"],
+									"path": ["curtidas", "comentario", "1"]
+								},
+								"description": "Remove curtida de um comentário"
+							},
+							"response": []
+						},
+						{
+							"name": "Verificar Curtida no Comentário",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/curtidas/comentario/1",
+									"host": ["{{base_url}}"],
+									"path": ["curtidas", "comentario", "1"]
+								},
+								"description": "Verifica se usuário curtiu o comentário"
+							},
+							"response": []
+						}
+					]
+				}
+			],
+			"description": "Sistema de curtidas para publicações e comentários do fórum"
+		},
+		{
+			"name": "15. Notificações",
+			"item": [
+				{
+					"name": "Listar Notificações",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/notificacoes",
+							"host": ["{{base_url}}"],
+							"path": ["notificacoes"]
+						},
+						"description": "Lista notificações do usuário logado"
+					},
+					"response": []
+				},
+				{
+					"name": "Contar Notificações Não Lidas",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/notificacoes/count",
+							"host": ["{{base_url}}"],
+							"path": ["notificacoes", "count"]
+						},
+						"description": "Retorna quantidade de notificações não lidas"
+					},
+					"response": []
+				},
+				{
+					"name": "Buscar Notificação por ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/notificacoes/1",
+							"host": ["{{base_url}}"],
+							"path": ["notificacoes", "1"]
+						},
+						"description": "Busca uma notificação específica"
+					},
+					"response": []
+				},
+				{
+					"name": "Marcar Notificação como Lida",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/notificacoes/1/lida",
+							"host": ["{{base_url}}"],
+							"path": ["notificacoes", "1", "lida"]
+						},
+						"description": "Marca uma notificação como lida"
+					},
+					"response": []
+				},
+				{
+					"name": "Marcar Todas como Lidas",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/notificacoes/todas/lidas",
+							"host": ["{{base_url}}"],
+							"path": ["notificacoes", "todas", "lidas"]
+						},
+						"description": "Marca todas as notificações como lidas"
+					},
+					"response": []
+				},
+				{
+					"name": "Deletar Notificação",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/notificacoes/1",
+							"host": ["{{base_url}}"],
+							"path": ["notificacoes", "1"]
+						},
+						"description": "Remove uma notificação"
+					},
+					"response": []
+				}
+			],
+			"description": "Sistema completo de notificações para usuários"
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000/api",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string",
+			"description": "Token JWT para autenticação geral"
+		},
+		{
+			"key": "admin_token",
+			"value": "",
+			"type": "string",
+			"description": "Token JWT de usuário administrador"
+		},
+		{
+			"key": "instituicao_token",
+			"value": "",
+			"type": "string",
+			"description": "Token JWT de usuário instituição"
+		},
+		{
+			"key": "pessoa_fisica_token",
+			"value": "",
+			"type": "string",
+			"description": "Token JWT de usuário pessoa física"
+		}
+	]
+}

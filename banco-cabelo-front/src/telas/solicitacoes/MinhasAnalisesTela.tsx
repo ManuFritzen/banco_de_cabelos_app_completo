@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -8,7 +8,8 @@ import {
   ActivityIndicator,
   Modal,
   ScrollView,
-  Alert
+  Alert,
+  TextInput
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -30,6 +31,7 @@ const MinhasAnalisesTela: React.FC = () => {
   const { usuario, ehInstituicao } = useAutenticacao();
   
   const [analises, setAnalises] = useState<SolicitacaoInstituicao[]>([]);
+  const [analisesFiltradas, setAnalisesFiltradas] = useState<SolicitacaoInstituicao[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [atualizando, setAtualizando] = useState(false);
   const [paginaAtual, setPaginaAtual] = useState(1);
@@ -39,6 +41,8 @@ const MinhasAnalisesTela: React.FC = () => {
   const [statusSelecionado, setStatusSelecionado] = useState<number>(1);
   const [observacoes, setObservacoes] = useState('');
   const [salvandoStatus, setSalvandoStatus] = useState(false);
+  const [filtroStatus, setFiltroStatus] = useState<number | 'todos'>('todos');
+  const [termoBusca, setTermoBusca] = useState('');
 
   const carregarAnalises = useCallback(async (pagina = 1, limparLista = true) => {
     if (!ehInstituicao()) return;
@@ -56,8 +60,11 @@ const MinhasAnalisesTela: React.FC = () => {
 
       if (limparLista) {
         setAnalises(dados.data);
+        setAnalisesFiltradas(dados.data);
       } else {
-        setAnalises(prev => [...prev, ...dados.data]);
+        const novasAnalises = [...analises, ...dados.data];
+        setAnalises(novasAnalises);
+        setAnalisesFiltradas(novasAnalises);
       }
     } catch (erro) {
       console.error('Erro ao carregar análises:', erro);
@@ -112,13 +119,8 @@ const MinhasAnalisesTela: React.FC = () => {
       
       Alert.alert('Sucesso', 'Status da análise atualizado com sucesso!');
       
-      // Atualizar a lista
-      const analisesAtualizadas = analises.map(a => 
-        a.id === analiseSelecionada.id 
-          ? { ...a, status_solicitacao_id: statusSelecionado, observacoes: observacoes || a.observacoes }
-          : a
-      );
-      setAnalises(analisesAtualizadas);
+      // Recarregar a lista para garantir atualização
+      await carregarAnalises(1, true);
       
       fecharModal();
     } catch (erro) {
@@ -271,22 +273,140 @@ const MinhasAnalisesTela: React.FC = () => {
   const renderEmpty = () => {
     if (carregando) return null;
     
+    let mensagem = 'Você ainda não analisou nenhuma solicitação.';
+    let submensagem = 'Acesse a lista de solicitações para começar a analisar.';
+    let icone = 'document-text-outline';
+    
+    if (termoBusca || filtroStatus !== 'todos') {
+      mensagem = 'Nenhuma análise encontrada';
+      if (termoBusca) {
+        submensagem = `Nenhuma análise encontrada com o nome "${termoBusca}"`;
+        icone = 'search-outline';
+      } else if (filtroStatus !== 'todos') {
+        const statusLabels: {[key: number]: string} = {
+          1: 'pendentes',
+          2: 'em análise',
+          3: 'aprovadas',
+          4: 'recusadas',
+          6: 'canceladas'
+        };
+        submensagem = `Nenhuma análise ${statusLabels[filtroStatus as number]} encontrada`;
+        icone = 'filter-outline';
+      }
+    }
+    
     return (
       <View style={[tw.flex1, tw.justifyCenter, tw.itemsCenter, tw.p8]}>
-        <Ionicons name="document-text-outline" size={64} color="#d1d5db" />
+        <Ionicons name={icone as any} size={64} color="#d1d5db" />
         <Text style={[tw.textGray500, tw.textCenter, tw.mT4]}>
-          Você ainda não analisou nenhuma solicitação.
+          {mensagem}
         </Text>
         <Text style={[tw.textGray500, tw.textCenter, tw.mT2]}>
-          Acesse a lista de solicitações para começar a analisar.
+          {submensagem}
         </Text>
+        {(termoBusca || filtroStatus !== 'todos') && (
+          <TouchableOpacity
+            style={[themeStyles.bgSecondary, tw.pX4, tw.pY2, tw.rounded, tw.mT4]}
+            onPress={() => {
+              setTermoBusca('');
+              setFiltroStatus('todos');
+            }}
+          >
+            <Text style={[tw.textWhite, tw.fontMedium]}>Limpar filtros</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
 
+  useEffect(() => {
+    let filtradas = analises;
+    
+    // Filtro por busca
+    if (termoBusca.trim() !== '') {
+      const termoLowerCase = termoBusca.toLowerCase();
+      filtradas = filtradas.filter(analise => 
+        analise.Solicitacao?.PessoaFisica?.nome?.toLowerCase().includes(termoLowerCase)
+      );
+    }
+    
+    // Filtro por status
+    if (filtroStatus !== 'todos') {
+      filtradas = filtradas.filter(analise => 
+        analise.status_solicitacao_id === filtroStatus
+      );
+    }
+    
+    setAnalisesFiltradas(filtradas);
+  }, [analises, termoBusca, filtroStatus]);
+
   return (
     <SafeContainer style={themeStyles.bgBackground}>
       
+      <View style={[{ backgroundColor: '#f8f9fa' }, tw.pB3]}>
+        <View style={[tw.pX4]}>
+          <View style={[tw.flexRow, tw.itemsCenter, tw.bgWhite, tw.rounded, tw.pX3, tw.mB3]}>
+            <Ionicons name="search" size={20} color="#999" style={tw.mR2} />
+            <TextInput
+              placeholder="Buscar por nome do solicitante..."
+              value={termoBusca}
+              onChangeText={setTermoBusca}
+              style={[tw.flex1, { fontSize: 14 }]}
+              clearButtonMode="while-editing"
+            />
+            {termoBusca.length > 0 && (
+              <TouchableOpacity onPress={() => setTermoBusca('')}>
+                <Ionicons name="close-circle" size={16} color="#999" />
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={[tw.pX1]}
+          >
+            {[
+              { key: 'todos', label: 'Todas', icon: 'list-outline' },
+              { key: 1, label: 'Pendente', icon: 'time-outline' },
+              { key: 2, label: 'Em análise', icon: 'eye-outline' },
+              { key: 3, label: 'Aprovada', icon: 'checkmark-circle-outline' },
+              { key: 4, label: 'Recusada', icon: 'close-circle-outline' },
+              { key: 6, label: 'Cancelada', icon: 'ban-outline' }
+            ].map((filtro) => (
+              <TouchableOpacity
+                key={filtro.key}
+                style={[
+                  tw.flexRow,
+                  tw.itemsCenter,
+                  tw.pX3,
+                  tw.pY2,
+                  tw.mR2,
+                  tw.rounded,
+                  filtroStatus === filtro.key ? themeStyles.bgSecondary : tw.bgWhite,
+                  { borderWidth: 1, borderColor: filtroStatus === filtro.key ? '#4EB296' : '#e5e7eb' }
+                ]}
+                onPress={() => setFiltroStatus(filtro.key as any)}
+              >
+                <Ionicons 
+                  name={filtro.icon as any} 
+                  size={16} 
+                  color={filtroStatus === filtro.key ? '#FFF' : '#6b7280'} 
+                  style={tw.mR1} 
+                />
+                <Text style={[
+                  tw.textSm,
+                  tw.fontMedium,
+                  filtroStatus === filtro.key ? tw.textWhite : tw.textGray600
+                ]}>
+                  {filtro.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      </View>
+
       <Container style={tw.p4}>
         {carregando && analises.length === 0 ? (
           <View style={[tw.flex1, tw.justifyCenter, tw.itemsCenter]}>
@@ -297,7 +417,7 @@ const MinhasAnalisesTela: React.FC = () => {
           </View>
         ) : (
           <FlatList
-            data={analises}
+            data={analisesFiltradas}
             renderItem={renderItem}
             keyExtractor={(item) => item.id.toString()}
             ListEmptyComponent={renderEmpty}
@@ -313,7 +433,7 @@ const MinhasAnalisesTela: React.FC = () => {
             onEndReachedThreshold={0.1}
             contentContainerStyle={{ 
               flexGrow: 1, 
-              ...(analises.length === 0 && { justifyContent: 'center' }) 
+              ...(analisesFiltradas.length === 0 && { justifyContent: 'center' }) 
             }}
           />
         )}
@@ -410,14 +530,21 @@ const MinhasAnalisesTela: React.FC = () => {
                 
                 <View style={tw.mB4}>
                   <Text style={[themeStyles.textText, tw.fontMedium, tw.mB2]}>Observações</Text>
-                  <View style={[tw.border, tw.borderGray300, tw.roundedLg, tw.p3]}>
-                    <Text
-                      style={[tw.textGray700]}
-                      onPress={() => {/* Implementar edição de observações se necessário */}}
-                    >
-                      {observacoes || 'Nenhuma observação'}
-                    </Text>
-                  </View>
+                  <TextInput
+                    style={[
+                      tw.border, 
+                      tw.borderGray300, 
+                      tw.roundedLg, 
+                      tw.p3, 
+                      tw.textGray700,
+                      { minHeight: 80, textAlignVertical: 'top' }
+                    ]}
+                    multiline
+                    placeholder="Digite suas observações..."
+                    value={observacoes}
+                    onChangeText={setObservacoes}
+                    editable={analiseSelecionada?.status_solicitacao_id < 3 && analiseSelecionada?.status_solicitacao_id !== 6}
+                  />
                 </View>
                 
                 <TouchableOpacity

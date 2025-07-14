@@ -75,6 +75,10 @@ const PerfilTela: React.FC = () => {
     navigation.navigate('SolicitacoesPerucaInstituicao');
   };
   
+  const navegarParaMinhasAnalises = () => {
+    navigation.navigate('MinhasAnalises');
+  };
+  
   // Carregar foto de perfil ao montar o componente
   useEffect(() => {
     const carregarFoto = async () => {
@@ -355,12 +359,23 @@ const PerfilTela: React.FC = () => {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[tw.flexRow, tw.itemsCenter, tw.pY3]}
+              style={[tw.flexRow, tw.itemsCenter, tw.pY3, tw.borderB, { borderBottomColor: '#f3f4f6' }]}
               onPress={navegarParaSolicitacoesPerucaInstituicao}
             >
               <Ionicons name="clipboard-outline" size={20} color="#4EB296" />
               <Text style={[themeStyles.textText, tw.mL3]}>
                 Solicitações de Perucas
+              </Text>
+              <Ionicons name="chevron-forward" size={18} color="#666" style={{ marginLeft: 'auto' }} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[tw.flexRow, tw.itemsCenter, tw.pY3]}
+              onPress={navegarParaMinhasAnalises}
+            >
+              <Ionicons name="analytics-outline" size={20} color="#4EB296" />
+              <Text style={[themeStyles.textText, tw.mL3]}>
+                Minhas Análises
               </Text>
               <Ionicons name="chevron-forward" size={18} color="#666" style={{ marginLeft: 'auto' }} />
             </TouchableOpacity>

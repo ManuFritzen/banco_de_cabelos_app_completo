@@ -57,6 +57,7 @@ const SolicitacoesPerucaInstituicaoTela: React.FC = () => {
   const [atualizando, setAtualizando] = useState(false);
   const [termoBusca, setTermoBusca] = useState('');
   const [solicitacoesFiltradas, setSolicitacoesFiltradas] = useState<Solicitacao[]>([]);
+  const [filtroStatus, setFiltroStatus] = useState<string>('todos');
   
   const { usuario } = useAutenticacao();
   const navigation = useNavigation<any>();
@@ -101,18 +102,38 @@ const SolicitacoesPerucaInstituicaoTela: React.FC = () => {
   );
   
   useEffect(() => {
-    if (termoBusca.trim() === '') {
-      setSolicitacoesFiltradas(solicitacoes);
-      return;
+    let filtradas = solicitacoes;
+    
+    // Filtro por busca
+    if (termoBusca.trim() !== '') {
+      const termoLowerCase = termoBusca.toLowerCase();
+      filtradas = filtradas.filter(item => 
+        item.usuario?.nome?.toLowerCase().includes(termoLowerCase)
+      );
     }
     
-    const termoLowerCase = termoBusca.toLowerCase();
-    const filtradas = solicitacoes.filter(item => 
-      item.usuario?.nome?.toLowerCase().includes(termoLowerCase)
-    );
+    // Filtro por status
+    if (filtroStatus !== 'todos') {
+      filtradas = filtradas.filter(item => {
+        const contadores = item.contadores;
+        
+        switch (filtroStatus) {
+          case 'sem_analises':
+            return !contadores || !contadores.tem_analises;
+          case 'em_analise':
+            return contadores && contadores.em_analise > 0;
+          case 'aprovado':
+            return contadores && contadores.aprovadas > 0;
+          case 'recusado':
+            return contadores && contadores.recusadas > 0;
+          default:
+            return true;
+        }
+      });
+    }
     
     setSolicitacoesFiltradas(filtradas);
-  }, [termoBusca, solicitacoes]);
+  }, [termoBusca, solicitacoes, filtroStatus]);
 
   const irParaDetalhes = (id: number) => {
     navigation.navigate('DetalhesSolicitacao' as never, { id } as never);
@@ -222,20 +243,42 @@ const SolicitacoesPerucaInstituicaoTela: React.FC = () => {
 
   const ListaVazia = () => {
     let mensagem = 'Não há solicitações para sua instituição';
+    let icone = 'document-text-outline';
     
     if (termoBusca) {
       mensagem = `Nenhuma solicitação encontrada com o nome "${termoBusca}"`;
+      icone = 'search-outline';
+    } else if (filtroStatus !== 'todos') {
+      const filtroLabels: {[key: string]: string} = {
+        'sem_analises': 'sem análises',
+        'em_analise': 'em análise',
+        'aprovado': 'aprovadas',
+        'recusado': 'recusadas'
+      };
+      mensagem = `Nenhuma solicitação ${filtroLabels[filtroStatus]} encontrada`;
+      icone = 'filter-outline';
     }
     
     return (
       <View style={[tw.flex1, tw.justifyCenter, tw.itemsCenter, tw.p5]}>
-        <Ionicons name="document-text-outline" size={50} style={[tw.textGray400, tw.mB3]} />
+        <Ionicons name={icone as any} size={50} style={[tw.textGray400, tw.mB3]} />
         <Text style={[tw.textLg, tw.fontMedium, tw.textCenter, tw.mB1]}>
           Nenhuma solicitação encontrada
         </Text>
         <Text style={[tw.textGray600, tw.textCenter, tw.mB3]}>
           {mensagem}
         </Text>
+        {(termoBusca || filtroStatus !== 'todos') && (
+          <TouchableOpacity
+            style={[themeStyles.bgSecondary, tw.pX4, tw.pY2, tw.rounded]}
+            onPress={() => {
+              setTermoBusca('');
+              setFiltroStatus('todos');
+            }}
+          >
+            <Text style={[tw.textWhite, tw.fontMedium]}>Limpar filtros</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
@@ -243,9 +286,9 @@ const SolicitacoesPerucaInstituicaoTela: React.FC = () => {
   return (
     <SafeContainer style={themeStyles.bgBackground}>
 
-      <View style={[{ backgroundColor: '#f8f9fa' }]}>
+      <View style={[{ backgroundColor: '#f8f9fa' }, tw.pB3]}>
         <View style={[tw.pX4]}>
-          <View style={[tw.flexRow, tw.itemsCenter, tw.bgWhite, tw.rounded, tw.pX3]}>
+          <View style={[tw.flexRow, tw.itemsCenter, tw.bgWhite, tw.rounded, tw.pX3, tw.mB3]}>
             <Ionicons name="search" size={20} color="#999" style={tw.mR2} />
             <TextInput
               placeholder="Buscar por nome..."
@@ -260,6 +303,49 @@ const SolicitacoesPerucaInstituicaoTela: React.FC = () => {
               </TouchableOpacity>
             )}
           </View>
+          
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={[tw.pX1]}
+          >
+            {[
+              { key: 'todos', label: 'Todas', icon: 'list-outline' },
+              { key: 'sem_analises', label: 'Sem análises', icon: 'time-outline' },
+              { key: 'em_analise', label: 'Em análise', icon: 'eye-outline' },
+              { key: 'aprovado', label: 'Aprovadas', icon: 'checkmark-circle-outline' },
+              { key: 'recusado', label: 'Recusadas', icon: 'close-circle-outline' }
+            ].map((filtro) => (
+              <TouchableOpacity
+                key={filtro.key}
+                style={[
+                  tw.flexRow,
+                  tw.itemsCenter,
+                  tw.pX3,
+                  tw.pY2,
+                  tw.mR2,
+                  tw.rounded,
+                  filtroStatus === filtro.key ? themeStyles.bgSecondary : tw.bgWhite,
+                  { borderWidth: 1, borderColor: filtroStatus === filtro.key ? '#4EB296' : '#e5e7eb' }
+                ]}
+                onPress={() => setFiltroStatus(filtro.key)}
+              >
+                <Ionicons 
+                  name={filtro.icon as any} 
+                  size={16} 
+                  color={filtroStatus === filtro.key ? '#FFF' : '#6b7280'} 
+                  style={tw.mR1} 
+                />
+                <Text style={[
+                  tw.textSm,
+                  tw.fontMedium,
+                  filtroStatus === filtro.key ? tw.textWhite : tw.textGray600
+                ]}>
+                  {filtro.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
       </View>
 
